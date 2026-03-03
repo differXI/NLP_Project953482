@@ -1,0 +1,167 @@
+.trend-chart-container {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.trend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.trend-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 18px;
+}
+
+.trend-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.trend-up {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.trend-down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.trend-stable {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.trend-icon {
+  font-size: 16px;
+}
+
+.trend-text {
+  text-transform: capitalize;
+}
+
+.trend-percent {
+  font-weight: 600;
+}
+
+.prediction-info {
+  margin-bottom: 20px;
+}
+
+.prediction-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.prediction-label {
+  font-size: 12px;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.prediction-value {
+  font-size: 48px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.prediction-confidence {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.custom-tooltip {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip-date {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.tooltip-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.tooltip-item.predicted {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.tooltip-label {
+  color: #6b7280;
+}
+
+.tooltip-value {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-line {
+  width: 20px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.chart-footer {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.error-message {
+  color: #dc2626;
+  text-align: center;
+  padding: 40px;
+  font-size: 14px;
+}
