@@ -1,20 +1,20 @@
 # NLP-953482: Course & Instructor Evaluation Analytics System
 
-## 📊 Project Overview
+## Project Overview
 
 An NLP-powered analytics system for analyzing course and instructor evaluations. The system combines quantitative data analysis with natural language processing to provide comprehensive insights into teaching performance.
 
 **Key Features:**
-- 🤖 Sentiment analysis (Positive/Neutral/Negative)
-- 🏷️ Multi-label categorization (5 analytical subcategories)
-- 📈 Trend analysis with Linear Regression
-- 🔮 Future rating prediction
-- ⚖️ Professor comparison dashboard
-- 🔄 Retrainable models with full training pipeline
+-  Sentiment analysis (Positive/Neutral/Negative)
+-  Multi-label categorization (5 analytical subcategories)
+-  Trend analysis with Linear Regression
+-  Future rating prediction
+-  Professor comparison dashboard
+-  Retrainable models with full training pipeline
 
 ---
 
-## 🚀 Getting Started
+## Started
 
 ### Prerequisites
 
@@ -44,7 +44,7 @@ An NLP-powered analytics system for analyzing course and instructor evaluations.
 
 ---
 
-## 🎯 First Time Setup - Train Models
+##  First Time Setup - Train Models
 
 **IMPORTANT:** Pre-trained models are included, but if you want to retrain them:
 
@@ -70,7 +70,7 @@ python evaluate_models.py
 
 ---
 
-## 🚀 Running the Application
+##  Running the Application
 
 ### Start Backend Server
 
@@ -125,7 +125,7 @@ You can now view frontend in the browser.
 
 ---
 
-## 🎓 Using the Application
+##  Using the Application
 
 ### Individual Professor View
 
@@ -142,7 +142,7 @@ You can now view frontend in the browser.
 
 ### Professor Comparison View
 
-1. **Click "📊 Compare Professors" tab**
+1. **Click " Compare Professors" tab**
 2. **Select 2-5 Professors** from the list
 3. **Click "Compare Professors"**
 4. **View:**
@@ -160,7 +160,7 @@ You can now view frontend in the browser.
 
 ---
 
-## 🏗️ Project Structure
+##  Project Structure
 
 ```
 NLP_Project953482/
@@ -198,7 +198,7 @@ NLP_Project953482/
 
 ---
 
-## 📚 Documentation Files
+##  Documentation Files
 
 | File | Description |
 |------|-------------|
@@ -209,7 +209,7 @@ NLP_Project953482/
 
 ---
 
-## 🔨 Training Models
+##  Training Models
 
 ### When to Retrain?
 
@@ -247,7 +247,7 @@ Retrain models when:
 
 ---
 
-## 📊 5 Analytical Categories
+##  5 Analytical Categories
 
 | Category | Description | Example Keywords |
 |----------|-------------|------------------|
@@ -259,7 +259,7 @@ Retrain models when:
 
 ---
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Backend Issues
 
@@ -304,38 +304,38 @@ lsof -ti:8000 | xargs kill -9
 
 ---
 
-## 📈 Features Implemented
+##  Features Implemented
 
-### ✅ Core Features (100% Complete)
+###  Core Features (100% Complete)
 
-1. ✅ **Sentiment Classification**
+1.  **Sentiment Classification**
    - Three-class classification (Positive/Neutral/Negative)
    - TF-IDF vectorization
    - Logistic Regression
 
-2. ✅ **Multi-label Category Classification**
+2.  **Multi-label Category Classification**
    - 5 analytical subcategories
    - Keyword-based labeling
    - OneVsRestClassifier
 
-3. ✅ **Trend Analysis**
+3. **Trend Analysis**
    - Time-series rating analysis
    - Linear Regression trend lines
    - R² model quality metrics
 
-4. ✅ **Prediction Feature**
+4. **Prediction Feature**
    - Future rating forecasting
    - Confidence intervals (95%)
    - Configurable prediction periods
 
-5. ✅ **Comparison Dashboard**
+5. **Comparison Dashboard**
    - Compare up to 5 professors
    - Side-by-side statistics
    - Multi-dimensional radar charts
 
 ---
 
-## 🎯 Target Users
+##  Target Users
 
 | User | Benefits |
 |------|----------|
@@ -346,7 +346,7 @@ lsof -ti:8000 | xargs kill -9
 
 ---
 
-## 📦 Dependencies
+##  Dependencies
 
 ### Backend (requirements.txt)
 
@@ -383,7 +383,7 @@ pydantic>=2.0.0
 
 ---
 
-## 📊 Datasets
+##  Datasets
 
 ### Primary: RateMyProfessor Sample
 
@@ -401,7 +401,7 @@ pydantic>=2.0.0
 
 ---
 
-## 🔄 Development Workflow
+##  Development Workflow
 
 ### Making Changes
 
@@ -432,7 +432,7 @@ python evaluate_models.py     # Default test cases
 
 ---
 
-## 📚 Additional Resources
+##  Additional Resources
 
 - **FastAPI:** https://fastapi.tiangolo.com/
 - **React:** https://react.dev/
@@ -441,7 +441,7 @@ python evaluate_models.py     # Default test cases
 
 ---
 
-## 🤝 Support
+##  Support
 
 For questions or issues:
 1. Check the [troubleshooting section](#-troubleshooting)
@@ -451,22 +451,22 @@ For questions or issues:
 
 ---
 
-## ✅ Implementation Status
+##  Implementation Status
 
-**Requirements Coverage:** 100% ✅
+**Requirements Coverage:** 100% 
 
 | Category | Status |
-|----------|--------|
-| Objectives (5/5) | ✅ Complete |
-| Core Features (5/5) | ✅ Complete |
-| Target Users (4/4) | ✅ Complete |
-| Training Scripts | ✅ Complete |
-| Trend Analysis | ✅ Complete |
-| Prediction Feature | ✅ Complete |
-| Comparison Feature | ✅ Complete |
+|----------|--------
+| Objectives (5/5) | Complete |
+| Core Features (5/5) |  Complete |
+| Target Users (4/4) |  Complete |
+| Training Scripts |  Complete |
+| Trend Analysis |  Complete |
+| Prediction Feature |  Complete |
+| Comparison Feature |  Complete |
 
 ---
 
 *Last Updated: March 4, 2026*
-*Project Status: ✅ Implementation Complete*
+*Project Status:  Implementation Complete*
 *Version: 1.0.0*
