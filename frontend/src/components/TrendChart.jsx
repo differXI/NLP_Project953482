@@ -17,6 +17,7 @@ export default function TrendChart({ data }) {
 
   // Prepare chart data for trend view
   let chartData = [];
+  let showConfidenceInterval = false;
 
   if (hasPrediction) {
     // Prediction view: combine historical + future
@@ -38,6 +39,7 @@ export default function TrendChart({ data }) {
     }));
 
     chartData = [...historicalData, ...futureData];
+    showConfidenceInterval = true;
   } else {
     // Simple trend view
     chartData = data.dates.map((date, i) => ({
@@ -50,6 +52,7 @@ export default function TrendChart({ data }) {
 
   const trendDirection = data.trend_direction || data.model_quality?.trend_direction;
   const trendPercentage = data.trend_percentage;
+  const rSquared = data.model_quality?.r_squared;
 
   const getTrendIcon = () => {
     if (trendDirection === "increasing") return "📈";
@@ -58,82 +61,70 @@ export default function TrendChart({ data }) {
   };
 
   const getTrendClass = () => {
-    if (trendDirection === "increasing") return "trend-up";
-    if (trendDirection === "decreasing") return "trend-down";
+    if (trendDirection === "increasing") return "trend-increasing";
+    if (trendDirection === "decreasing") return "trend-decreasing";
     return "trend-stable";
   };
 
   return (
     <div className="trend-chart-container">
       <div className="trend-header">
-        <h3>Rating Trend Analysis</h3>
-        {trendDirection && (
-          <div className={`trend-badge ${getTrendClass()}`}>
-            <span className="trend-icon">{getTrendIcon()}</span>
-            <span className="trend-text">{trendDirection}</span>
-            {trendPercentage && <span className="trend-percent">{trendPercentage}</span>}
-          </div>
-        )}
+        <h3>Rating Trend & Prediction</h3>
+
+        <div className={`trend-indicator ${getTrendClass()}`}>
+          <span className="trend-icon">{getTrendIcon()}</span>
+          <span className="trend-text">
+            {trendDirection || "Stable"} ({trendPercentage >= 0 ? "+" : ""}{trendPercentage}%)
+          </span>
+        </div>
       </div>
 
-      {hasPrediction && (
-        <div className="prediction-info">
-          <div className="prediction-card">
-            <div className="prediction-label">Next Semester Prediction</div>
-            <div className="prediction-value">{data.next_semester_prediction}</div>
-            <div className="prediction-confidence">
-              Confidence: {data.confidence}% | R²: {data.model_quality.r_squared}
-            </div>
-          </div>
+      {rSquared !== undefined && (
+        <div className="model-quality">
+          <span className="quality-label">Model Quality:</span>
+          <span className="quality-value">R² = {rSquared.toFixed(3)}</span>
         </div>
       )}
 
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <LineChart
+          data={chartData}
+          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
           <XAxis
             dataKey="date"
-            tick={{ fontSize: 12 }}
-            stroke="#666"
+            tick={{ fill: '#666', fontSize: 12 }}
+            tickLine={false}
           />
           <YAxis
             domain={[1, 5]}
-            tick={{ fontSize: 12 }}
-            stroke="#666"
-            label={{ value: 'Rating', angle: -90, position: 'insideLeft' }}
+            tick={{ fill: '#666', fontSize: 12 }}
+            tickLine={false}
+            label={{ value: 'Rating', position: 'insideLeft', angle: -90, dy: -10, fill: '#666' }}
           />
           <Tooltip
-            content={({ active, payload }) => {
+            content={({ active, payload, label }) => {
               if (active && payload && payload.length) {
                 const data = payload[0].payload;
                 return (
                   <div className="custom-tooltip">
                     <div className="tooltip-date">{data.fullDate}</div>
                     {data.actualRating !== undefined && (
-                      <div className="tooltip-item">
-                        <span className="tooltip-label">Actual:</span>
-                        <span className="tooltip-value">{data.actualRating.toFixed(2)}</span>
-                      </div>
+                      <div>Actual Rating: <strong>{data.actualRating.toFixed(2)}</strong></div>
                     )}
                     {data.trendLine !== undefined && (
-                      <div className="tooltip-item">
-                        <span className="tooltip-label">Trend:</span>
-                        <span className="tooltip-value">{data.trendLine.toFixed(2)}</span>
-                      </div>
+                      <div>Trend Line: <strong>{data.trendLine.toFixed(2)}</strong></div>
                     )}
                     {data.predictedRating !== undefined && (
-                      <div className="tooltip-item predicted">
-                        <span className="tooltip-label">Predicted:</span>
-                        <span className="tooltip-value">{data.predictedRating.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {data.lowerBound !== undefined && (
-                      <div className="tooltip-item">
-                        <span className="tooltip-label">Range:</span>
-                        <span className="tooltip-value">
-                          {data.lowerBound.toFixed(2)} - {data.upperBound.toFixed(2)}
-                        </span>
-                      </div>
+                      <>
+                        <div>Predicted: <strong>{data.predictedRating.toFixed(2)}</strong></div>
+                        {showConfidenceInterval && (
+                          <div className="confidence-interval">
+                            Range: {data.lowerBound.toFixed(2)} - {data.upperBound.toFixed(2)}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 );
@@ -143,44 +134,44 @@ export default function TrendChart({ data }) {
           />
           <Legend />
 
-          {/* Actual ratings (historical only) */}
+          {/* Actual Ratings */}
           <Line
             type="monotone"
             dataKey="actualRating"
-            stroke="#2563eb"
+            stroke="#3b82f6"
             strokeWidth={2}
-            dot={{ r: 4 }}
             name="Actual Rating"
+            dot={{ r: 3 }}
             connectNulls={false}
           />
 
-          {/* Trend line */}
+          {/* Trend Line */}
           <Line
             type="monotone"
             dataKey="trendLine"
             stroke="#10b981"
             strokeWidth={2}
             strokeDasharray="5 5"
-            dot={false}
             name="Trend Line"
+            dot={false}
           />
 
-          {/* Predicted ratings (future only) */}
+          {/* Predicted Values */}
           {hasPrediction && (
             <Line
               type="monotone"
               dataKey="predictedRating"
               stroke="#f59e0b"
               strokeWidth={2}
-              strokeDasharray="8 4"
+              strokeDasharray="3 3"
+              name="Predicted"
               dot={{ r: 4, fill: "#f59e0b" }}
-              name="Predicted Rating"
               connectNulls={false}
             />
           )}
 
-          {/* Confidence interval bounds (future only) */}
-          {hasPrediction && (
+          {/* Confidence Interval Bounds */}
+          {hasPrediction && showConfidenceInterval && (
             <>
               <Line
                 type="monotone"
@@ -188,9 +179,9 @@ export default function TrendChart({ data }) {
                 stroke="#f59e0b"
                 strokeWidth={1}
                 strokeDasharray="2 2"
+                opacity={0.3}
                 dot={false}
-                name="Upper Bound (95%)"
-                hide={true} // Hide from legend
+                hideLegend={true}
               />
               <Line
                 type="monotone"
@@ -198,35 +189,29 @@ export default function TrendChart({ data }) {
                 stroke="#f59e0b"
                 strokeWidth={1}
                 strokeDasharray="2 2"
+                opacity={0.3}
                 dot={false}
-                name="Lower Bound (95%)"
-                hide={true} // Hide from legend
+                hideLegend={true}
               />
             </>
           )}
         </LineChart>
       </ResponsiveContainer>
 
-      <div className="chart-legend">
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: "#2563eb" }}></span>
-          <span>Actual Rating</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-line" style={{ background: "#10b981", borderStyle: "dashed" }}></span>
-          <span>Trend Line</span>
-        </div>
-        {hasPrediction && (
+      {hasPrediction && (
+        <div className="prediction-legend">
           <div className="legend-item">
-            <span className="legend-dot" style={{ background: "#f59e0b" }}></span>
-            <span>Predicted Rating</span>
+            <span className="legend-line actual"></span>
+            <span>Actual Rating</span>
           </div>
-        )}
-      </div>
-
-      {data.data_points && (
-        <div className="chart-footer">
-          Data points: {data.data_points}
+          <div className="legend-item">
+            <span className="legend-line trend"></span>
+            <span>Trend Line</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-line predicted"></span>
+            <span>Predicted (95% CI)</span>
+          </div>
         </div>
       )}
     </div>

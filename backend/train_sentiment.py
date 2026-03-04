@@ -1,9 +1,18 @@
+"""
+Sentiment Classification Training Script
+
+Trains a Logistic Regression model to classify professor comments as:
+- Positive (rating >= 4.0)
+- Neutral (3.0 <= rating < 4.0)
+- Negative (rating < 3.0)
+"""
+
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import joblib
 import re
 import nltk
@@ -11,144 +20,259 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import os
 
-def load_and_prepare_data():
-    """
-    Load comments และสร้าง labels สำหรับ sentiment
+# Download required NLTK data
+try:
+    nltk.data.find('corpora/stopwords')
+    nltk.data.find('corpora/wordnet')
+except LookupError:
+    print("Downloading NLTK data...")
+    nltk.download('stopwords', quiet=True)
+    nltk.download('wordnet', quiet=True)
 
-    Labeling Strategy:
-    - Positive: rating >= 4.0
-    - Neutral: 3.0 <= rating < 4.0
-    - Negative: rating < 3.0
+
+def load_and_prepare_data(data_path="data/RateMyProfessor_Sample.csv"):
+    """
+    Load comments and create sentiment labels based on star ratings
 
     Returns:
-        X: list of comments
+        X: list of comment texts
         y: list of sentiment labels
     """
-    df = pd.read_csv("data/RateMyProfessor_Sample.csv")
+    print(f"Loading data from {data_path}...")
+
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"Data file not found: {data_path}")
+
+    df = pd.read_csv(data_path)
+
+    # Check required columns
+    required_cols = ['star_rating', 'comments']
+    for col in required_cols:
+        if col not in df.columns:
+            raise ValueError(f"Required column '{col}' not found in dataset")
+
+    # Drop rows with missing values
     df = df[['star_rating', 'comments']].dropna()
 
-    # Label based on star_rating
+    print(f"  Loaded {len(df)} reviews")
+
+    # Create sentiment labels based on star_rating
     df['sentiment'] = df['star_rating'].apply(lambda x:
         'positive' if x >= 4.0 else
         'neutral' if x >= 3.0 else
         'negative'
     )
 
-    print(f"\nDataset Statistics:")
-    print(f"Total samples: {len(df)}")
-    print(f"Sentiment distribution:")
+    # Display label distribution
+    print(f"\n  Label Distribution:")
     print(df['sentiment'].value_counts())
-    print(f"\nStar rating distribution:")
-    print(df['star_rating'].value_counts().sort_index())
+    print(f"  Percentage:")
+    print(df['sentiment'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%')
 
     return df['comments'].tolist(), df['sentiment'].tolist()
 
+
 def preprocess_text(text_list):
     """
-    Text preprocessing:
-    - Lowercase
-    - Remove special characters
-    - Tokenization (implicit in TF-IDF)
-    - Remove stopwords
-    - Lemmatization
-    """
-    # Download required NLTK data
-    try:
-        nltk.data.find('corpora/stopwords')
-    except LookupError:
-        nltk.download('stopwords', quiet=True)
+    Text preprocessing for NLP
 
-    try:
-        nltk.data.find('corpora/wordnet')
-    except LookupError:
-        nltk.download('wordnet', quiet=True)
+    Steps:
+    1. Lowercase conversion
+    2. Remove special characters and numbers
+    3. Tokenization
+    4. Stopword removal
+    5. Lemmatization
+
+    Args:
+        text_list: List of text strings
+
+    Returns:
+        List of processed text strings
+    """
+    print("\nPreprocessing text...")
 
     stop_words = set(stopwords.words('english'))
     lemmatizer = WordNetLemmatizer()
 
     processed = []
+
     for i, text in enumerate(text_list):
-        if i % 1000 == 0:
+        if i % 10000 == 0:
             print(f"  Processing {i}/{len(text_list)}...")
 
-        # Lowercase
-        text = text.lower()
-        # Remove special characters
+        # Convert to lowercase
+        text = str(text).lower()
+
+        # Remove special characters, numbers, and extra whitespace
         text = re.sub(r'[^a-zA-Z\s]', '', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+
         # Tokenize and remove stopwords
         words = [lemmatizer.lemmatize(word) for word in text.split()
                  if word not in stop_words and len(word) > 2]
+
         processed.append(' '.join(words))
 
+    print(f"  Preprocessed {len(processed)} texts")
     return processed
 
-def train_sentiment_model():
-    """Train sentiment classification model"""
-    print("=" * 60)
+
+def train_sentiment_model(data_path="data/RateMyProfessor_Sample.csv",
+                          model_dir="models",
+                          test_size=0.2,
+                          max_features=5000):
+    """
+    Train sentiment classification model
+
+    Args:
+        data_path: Path to the CSV dataset
+        model_dir: Directory to save trained models
+        test_size: Proportion of data for testing
+        max_features: Maximum number of features for TF-IDF
+
+    Returns:
+        Dictionary containing model performance metrics
+    """
+    print("\n" + "="*60)
     print("SENTIMENT CLASSIFICATION MODEL TRAINING")
-    print("=" * 60)
+    print("="*60)
 
-    print("\n[1/5] Loading data...")
-    X_raw, y = load_and_prepare_data()
+    # Create model directory if it doesn't exist
+    os.makedirs(model_dir, exist_ok=True)
 
-    print("\n[2/5] Preprocessing text...")
+    # 1. Load and prepare data
+    X_raw, y = load_and_prepare_data(data_path)
+
+    # 2. Preprocess text
     X = preprocess_text(X_raw)
 
-    print("\n[3/5] Vectorizing...")
-    vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
-    X_vec = vectorizer.fit_transform(X)
-    print(f"  Feature shape: {X_vec.shape}")
-
-    print("\n[4/5] Splitting and training data...")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_vec, y, test_size=0.2, random_state=42, stratify=y
+    # 3. Vectorize using TF-IDF
+    print("\nVectorizing text with TF-IDF...")
+    vectorizer = TfidfVectorizer(
+        max_features=max_features,
+        ngram_range=(1, 2),  # Use unigrams and bigrams
+        min_df=2,  # Ignore terms that appear in less than 2 documents
+        max_df=0.8  # Ignore terms that appear in more than 80% of documents
     )
-    print(f"  Train samples: {X_train.shape[0]}")
-    print(f"  Test samples: {X_test.shape[0]}")
+    X_vec = vectorizer.fit_transform(X)
 
-    print("\n  Training Logistic Regression model...")
-    model = LogisticRegression(max_iter=1000, multi_class='ovr', random_state=42)
+    print(f"  Feature matrix shape: {X_vec.shape}")
+    print(f"  Vocabulary size: {len(vectorizer.vocabulary_)}")
+
+    # 4. Split data
+    print("\nSplitting data...")
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_vec, y, test_size=test_size, random_state=42, stratify=y
+    )
+    print(f"  Training set: {len(X_train)} samples")
+    print(f"  Test set: {len(X_test)} samples")
+
+    # 5. Train model
+    print("\nTraining Logistic Regression model...")
+    model = LogisticRegression(
+        max_iter=1000,
+        multi_class='multinomial',
+        solver='lbfgs',
+        random_state=42,
+        class_weight='balanced'  # Handle class imbalance
+    )
     model.fit(X_train, y_train)
+    print("  Training complete!")
 
-    print("\n[5/5] Evaluating model...")
+    # 6. Evaluate
+    print("\n" + "-"*60)
+    print("MODEL EVALUATION")
+    print("-"*60)
+
+    # Training accuracy
+    train_pred = model.predict(X_train)
+    train_accuracy = accuracy_score(y_train, train_pred)
+    print(f"\nTraining Accuracy: {train_accuracy:.4f}")
+
+    # Test predictions
     y_pred = model.predict(X_test)
-    print("\n" + "=" * 60)
-    print("CLASSIFICATION REPORT")
-    print("=" * 60)
-    print(classification_report(y_test, y_pred))
+    test_accuracy = accuracy_score(y_test, y_pred)
+    print(f"Test Accuracy: {test_accuracy:.4f}")
 
-    print("\n" + "=" * 60)
-    print("CONFUSION MATRIX")
-    print("=" * 60)
+    # Classification report
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred, target_names=['Negative', 'Neutral', 'Positive']))
+
+    # Confusion matrix
+    print("\nConfusion Matrix:")
     cm = confusion_matrix(y_test, y_pred)
-    print("              Predicted")
-    print("             Neg Neu Pos")
-    labels = ['negative', 'neutral', 'positive']
+    print("         Predicted")
+    print("          Neg  Neu  Pos")
+    labels = ['Neg', 'Neu', 'Pos']
     for i, label in enumerate(labels):
-        print(f"Actual {label:8s} {cm[i]}")
+        print(f"Actual {label}: {cm[i]}")
 
-    # Calculate overall accuracy
-    accuracy = (y_pred == y_test).mean()
-    print(f"\nOverall Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
+    # 7. Save models
+    print("\n" + "-"*60)
+    print("SAVING MODELS")
+    print("-"*60)
 
-    # Create models directory if it doesn't exist
-    os.makedirs('models', exist_ok=True)
+    vectorizer_path = os.path.join(model_dir, 'vectorizer.pkl')
+    model_path = os.path.join(model_dir, 'sentiment_model.pkl')
 
-    # Save models
-    print("\n" + "=" * 60)
-    print("Saving models...")
-    print("=" * 60)
-    joblib.dump(vectorizer, 'models/vectorizer.pkl')
-    print("  ✓ Saved: models/vectorizer.pkl")
+    joblib.dump(vectorizer, vectorizer_path)
+    print(f"  ✓ Vectorizer saved to {vectorizer_path}")
 
-    joblib.dump(model, 'models/sentiment_model.pkl')
-    print("  ✓ Saved: models/sentiment_model.pkl")
+    joblib.dump(model, model_path)
+    print(f"  ✓ Model saved to {model_path}")
 
-    print("\n" + "=" * 60)
-    print("TRAINING COMPLETE!")
-    print("=" * 60)
-    print(f"Models saved to models/ directory")
-    print(f"Final accuracy: {accuracy*100:.2f}%")
+    # Get feature importance (top words for each class)
+    print("\n" + "-"*60)
+    print("FEATURE IMPORTANCE (Top words per class)")
+    print("-"*60)
+
+    feature_names = vectorizer.get_feature_names_out()
+    class_labels = model.classes_
+
+    for i, class_label in enumerate(class_labels):
+        # Get coefficients for this class
+        coef = model.coef_[i]
+
+        # Get top 10 positive features
+        top_indices = np.argsort(coef)[-10:][::-1]
+        top_words = [feature_names[idx] for idx in top_indices]
+        top_scores = [coef[idx] for idx in top_indices]
+
+        print(f"\n{class_label.upper()}:")
+        for word, score in zip(top_words, top_scores):
+            print(f"  {word}: {score:.4f}")
+
+    # Return performance metrics
+    metrics = {
+        'train_accuracy': train_accuracy,
+        'test_accuracy': test_accuracy,
+        'classification_report': classification_report(y_test, y_pred, output_dict=True),
+        'confusion_matrix': cm.tolist(),
+        'feature_count': len(feature_names),
+        'class_labels': class_labels.tolist()
+    }
+
+    return metrics
+
 
 if __name__ == "__main__":
-    train_sentiment_model()
+    import sys
+
+    data_path = sys.argv[1] if len(sys.argv) > 1 else "data/RateMyProfessor_Sample.csv"
+
+    try:
+        metrics = train_sentiment_model(data_path=data_path)
+
+        print("\n" + "="*60)
+        print("TRAINING COMPLETE!")
+        print("="*60)
+        print(f"Final Test Accuracy: {metrics['test_accuracy']:.4f}")
+        print(f"Features: {metrics['feature_count']}")
+        print(f"Classes: {metrics['class_labels']}")
+        print("="*60)
+
+    except Exception as e:
+        print(f"\nERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

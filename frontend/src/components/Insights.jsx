@@ -1,6 +1,5 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import TrendChart from "./TrendChart";
-import "./Insights.css";
 
 const COLORS = {
   positive: "#10b981",
@@ -33,108 +32,63 @@ export default function Insights({ data, trendData, predictionData }) {
     originalKey: k
   }));
 
-  // Combine trend and prediction data
+  // Combine trend and prediction data (prefer prediction)
   const combinedTrendData = predictionData || trendData;
 
   return (
-    <div className="insights-container">
-      {/* Header */}
-      <div className="insights-header">
-        <h2 className="professor-name">{data.professor}</h2>
-        <div className="rating-badges">
-          <div className="rating-badge rating-badge-primary">
-            <div className="rating-label">Quality</div>
-            <div className="rating-value">{data.avg_rating}</div>
-          </div>
-          <div className="rating-badge rating-badge-secondary">
-            <div className="rating-label">Difficulty</div>
-            <div className="rating-value">{data.avg_difficulty}</div>
-          </div>
-          <div className="rating-badge rating-badge-info">
-            <div className="rating-label">Ratings</div>
-            <div className="rating-value">{data.num_ratings}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Courses */}
-      {data.courses && data.courses.length > 0 && (
-        <div className="courses-section">
-          <h4>Courses</h4>
-          <div className="courses-list">
-            {data.courses.map((course, i) => (
-              <span key={i} className="course-tag">{course}</span>
-            ))}
-          </div>
-        </div>
-      )}
+    <div>
+      <h2 style={{ marginBottom: 20 }}>{data.professor}</h2>
+      <p>Avg Rating: <strong>{data.avg_rating}</strong></p>
+      <p>Avg Difficulty: <strong>{data.avg_difficulty}</strong></p>
 
       {/* Trend Chart */}
       {combinedTrendData && (
-        <TrendChart data={combinedTrendData} />
+        <div style={{ marginBottom: 24 }}>
+          <TrendChart data={combinedTrendData} />
+        </div>
       )}
 
       {/* Charts Grid */}
-      <div className="charts-grid">
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
         {/* Sentiment Chart */}
-        <div className="chart-card">
-          <h3>Sentiment Distribution</h3>
-          <ResponsiveContainer width="100%" height={250}>
+        <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, background: '#f9fafb' }}>
+          <h3 style={{ marginTop: 0 }}>Sentiment Distribution</h3>
+          <ResponsiveContainer width={400} height={250}>
             <BarChart data={sentData} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
-              <XAxis
-                dataKey="name"
-                tick={{ fill: '#6b7280' }}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fill: '#6b7280' }}
-                tickLine={false}
-              />
+              <XAxis dataKey="name" tick={{ fill: '#6b7280' }} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280' }} tickLine={false} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
-                    const data = payload[0].payload;
+                    const d = payload[0].payload;
                     return (
-                      <div className="custom-tooltip">
-                        <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                          {data.name.charAt(0).toUpperCase() + data.name.slice(1)}
-                        </div>
-                        <div>Count: {data.value}</div>
-                        <div>Percentage: {data.percentage}%</div>
+                      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 4, padding: 8 }}>
+                        <div style={{ fontWeight: 600 }}>{d.name.charAt(0).toUpperCase() + d.name.slice(1)}</div>
+                        <div>Count: {d.value}</div>
+                        <div>Percentage: {d.percentage}%</div>
                       </div>
                     );
                   }
                   return null;
                 }}
               />
-              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                {sentData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[entry.name] || "#6b7280"}
-                  />
-                ))}
-              </Bar>
+              <Bar dataKey="value" fill={sentData.map(entry => COLORS[entry.name] || "#6b7280")} radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-          <div className="chart-summary">
+          <div style={{ marginTop: 12, fontSize: 12, color: '#6b7280' }}>
             {sentData.map(item => (
-              <div key={item.name} className="summary-item">
-                <span
-                  className="summary-dot"
-                  style={{ background: COLORS[item.name] }}
-                ></span>
-                <span className="summary-label">{item.name}</span>
-                <span className="summary-value">{item.percentage}%</span>
-              </div>
+              <span key={item.name} style={{ marginRight: 16 }}>
+                <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: COLORS[item.name], marginRight: 4 }}></span>
+                {item.name}: {item.percentage}%
+              </span>
             ))}
           </div>
         </div>
 
         {/* Category Chart */}
-        <div className="chart-card">
-          <h3>Category Breakdown</h3>
-          <ResponsiveContainer width="100%" height={250}>
+        <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, background: '#f9fafb' }}>
+          <h3 style={{ marginTop: 0 }}>Category Breakdown</h3>
+          <ResponsiveContainer width={400} height={250}>
             <BarChart data={catData} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
               <XAxis
                 dataKey="name"
@@ -144,46 +98,30 @@ export default function Insights({ data, trendData, predictionData }) {
                 textAnchor="end"
                 height={60}
               />
-              <YAxis
-                tick={{ fill: '#6b7280' }}
-                tickLine={false}
-              />
+              <YAxis tick={{ fill: '#6b7280' }} tickLine={false} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
-                    const data = payload[0].payload;
+                    const d = payload[0].payload;
                     return (
-                      <div className="custom-tooltip">
-                        <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                          {data.name}
-                        </div>
-                        <div>Mentions: {data.value}</div>
+                      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 4, padding: 8 }}>
+                        <div style={{ fontWeight: 600 }}>{d.name}</div>
+                        <div>Mentions: {d.value}</div>
                       </div>
                     );
                   }
                   return null;
                 }}
               />
-              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                {catData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={CATEGORY_COLORS[entry.originalKey] || "#6b7280"}
-                  />
-                ))}
-              </Bar>
+              <Bar dataKey="value" fill={catData.map(entry => CATEGORY_COLORS[entry.originalKey] || "#6b7280")} radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-          <div className="chart-summary">
+          <div style={{ marginTop: 12, fontSize: 12, color: '#6b7280' }}>
             {catData.map(item => (
-              <div key={item.name} className="summary-item">
-                <span
-                  className="summary-dot"
-                  style={{ background: CATEGORY_COLORS[item.originalKey] }}
-                ></span>
-                <span className="summary-label">{item.name}</span>
-                <span className="summary-value">{item.value}</span>
-              </div>
+              <span key={item.name} style={{ marginRight: 16 }}>
+                <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: CATEGORY_COLORS[item.originalKey], marginRight: 4 }}></span>
+                {item.name}: {item.value}
+              </span>
             ))}
           </div>
         </div>

@@ -1,8 +1,8 @@
 .trend-chart-container {
   background: white;
-  border-radius: 8px;
-  padding: 20px;
-  margin: 20px 0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -11,80 +11,79 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .trend-header h3 {
   margin: 0;
   color: #1f2937;
-  font-size: 18px;
+  font-size: 20px;
+  font-weight: 600;
 }
 
-.trend-badge {
+.trend-indicator {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
   border-radius: 20px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-.trend-up {
+.trend-indicator.trend-increasing {
   background: #d1fae5;
   color: #065f46;
 }
 
-.trend-down {
+.trend-indicator.trend-decreasing {
   background: #fee2e2;
   color: #991b1b;
 }
 
-.trend-stable {
+.trend-indicator.trend-stable {
   background: #f3f4f6;
   color: #374151;
 }
 
 .trend-icon {
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .trend-text {
-  text-transform: capitalize;
+  font-size: 14px;
 }
 
-.trend-percent {
-  font-weight: 600;
-}
-
-.prediction-info {
-  margin-bottom: 20px;
-}
-
-.prediction-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 20px;
+.model-quality {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: #f9fafb;
   border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.quality-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.quality-value {
+  color: #1f2937;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.error-message {
+  padding: 40px;
   text-align: center;
-}
-
-.prediction-label {
-  font-size: 12px;
-  opacity: 0.9;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-}
-
-.prediction-value {
-  font-size: 48px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.prediction-confidence {
-  font-size: 12px;
-  opacity: 0.8;
+  color: #6b7280;
+  font-size: 14px;
+  background: #fef2f2;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
 }
 
 .custom-tooltip {
@@ -93,42 +92,30 @@
   border-radius: 8px;
   padding: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+  min-width: 150px;
 }
 
 .tooltip-date {
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 8px;
-  font-size: 13px;
+  color: #1f2937;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.tooltip-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  font-size: 13px;
+.confidence-interval {
+  font-size: 11px;
+  color: #6b7280;
   margin-top: 4px;
 }
 
-.tooltip-item.predicted {
-  color: #f59e0b;
-  font-weight: 500;
-}
-
-.tooltip-label {
-  color: #6b7280;
-}
-
-.tooltip-value {
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.chart-legend {
+.prediction-legend {
   display: flex;
   gap: 20px;
-  justify-content: center;
   margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
   flex-wrap: wrap;
 }
 
@@ -137,31 +124,54 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #4b5563;
-}
-
-.legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  color: #374151;
 }
 
 .legend-line {
-  width: 20px;
-  height: 2px;
-  border-radius: 1px;
+  width: 30px;
+  height: 3px;
+  border-radius: 2px;
 }
 
-.chart-footer {
-  text-align: center;
-  margin-top: 12px;
-  font-size: 12px;
-  color: #9ca3af;
+.legend-line.actual {
+  background: #3b82f6;
 }
 
-.error-message {
-  color: #dc2626;
-  text-align: center;
-  padding: 40px;
-  font-size: 14px;
+.legend-line.trend {
+  background: #10b981;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #10b981,
+    #10b981 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.legend-line.predicted {
+  background: #f59e0b;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #f59e0b,
+    #f59e0b 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+@media (max-width: 768px) {
+  .trend-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .trend-chart-container {
+    padding: 16px;
+  }
+
+  .prediction-legend {
+    flex-direction: column;
+    gap: 8px;
+  }
 }

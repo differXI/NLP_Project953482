@@ -1,4 +1,4 @@
-# NLP-953482: Analytic Categories Review System for Course and Instructor Evaluation
+# NLP-953482: Course & Instructor Evaluation Analytics System
 
 ## Project Overview
 
@@ -18,7 +18,9 @@
 7. [Development Milestones](#development-milestones)
 8. [Datasets](#datasets)
 9. [Technology Stack](#technology-stack)
-10. [🎉 Implementation Complete - March 2026](#implementation-complete---march-2026)
+10. [System Capabilities](#system-capabilities)
+11. [Known Limitations](#known-limitations)
+12. [Next Steps](#next-steps)
 
 ---
 
@@ -29,44 +31,51 @@
 1. **Limited Interpretability of Numerical Scores**
    - Numerical ratings summarize satisfaction but lack contextual explanations
    - Cannot identify specific causes behind evaluation results
+   - Rating alone doesn't indicate what needs improvement
 
 2. **Manual Analysis of Textual Feedback**
-   - Time-consuming and labor-intensive
-   - Difficult to standardize
-   - Inconsistent across reviewers
+   - Time-consuming and labor-intensive process
+   - Difficult to standardize across multiple reviewers
+   - Inconsistent analysis due to human subjectivity
+   - Not scalable for large volumes of feedback
 
 3. **Lack of Structured Categorization**
    - Existing systems focus only on overall sentiment (positive/negative)
    - Cannot identify specific aspects of teaching performance systematically
+   - No way to group feedback by meaningful categories
 
 4. **Inconsistent Interpretation**
    - Manual interpretation introduces subjectivity
    - Different evaluators may interpret the same comment differently
+   - Reduces reliability and fairness of evaluation
 
 ---
 
 ## System Objectives
 
-1. Analyze structured evaluation data using standard statistical methods
-2. Classify open-ended textual feedback into positive, negative, and neutral sentiment
-3. Detect and categorize multiple issues within a single comment
-4. Organize feedback into meaningful subcategories for deeper analysis
-5. **Predict future instructor and course popularity trends** based on historical data
+The system aims to achieve the following objectives:
+
+1. ✅ **Analyze structured evaluation data** using standard statistical methods
+2. ✅ **Classify open-ended textual feedback** into positive, negative, and neutral sentiment
+3. ✅ **Detect and categorize multiple issues** within a single comment
+4. ✅ **Organize feedback into meaningful subcategories** for deeper analysis
+5. ❌ **Predict future instructor and course popularity trends** based on historical data (NOT YET IMPLEMENTED)
 
 ---
 
 ## Methodology
 
 ### 1. Quantitative Data Analysis
+
 Focuses on structured evaluation data:
 - Rating-scale questions (1-5 scale)
-- Multiple-choice questions
+- Multiple-choice or fixed-answer questions
 
-**Analysis Techniques:**
-- Descriptive statistics (mean, distribution, frequency)
-- Comparative analysis across evaluation criteria
-- **Trend and Time-Series Analysis**
-- **Linear Regression for forecasting future results**
+**Current Analysis Techniques:**
+- ✅ Descriptive statistics (mean, distribution, frequency)
+- ✅ Basic comparative analysis
+- ❌ Trend and Time-Series Analysis (NOT IMPLEMENTED)
+- ❌ Linear Regression for forecasting (NOT IMPLEMENTED)
 
 ### 2. NLP-Based Qualitative Text Analysis
 
@@ -75,352 +84,632 @@ Focuses on structured evaluation data:
 **2.1 Supervised Learning**
 - Sentiment classification (Positive / Negative / Neutral)
 - Multi-label subcategory classification
-- **Possible Models:** Logistic Regression, SVM, BERT
+- **Current Models:** Pre-trained models using scikit-learn
 
 **2.2 Feature Representation**
-- TF-IDF vectorization
-- Word embeddings (optional)
+- ✅ TF-IDF vectorization (current implementation)
+- ⚠️ Word embeddings (not implemented)
 
-**2.3 Rule-Based Support (Hybrid Approach)**
-- Keyword dictionaries for strengthening classification consistency
+**2.3 Model Architecture**
+- **Vectorization:** TfidfVectorizer
+- **Sentiment Model:** Logistic Regression / Multiclass classifier
+- **Category Model:** Multi-label classifier with MultiLabelBinarizer
 
 #### Sentiment Classification
 - **Type:** Multi-class classification
 - **Labels:** Positive, Negative, Neutral
-- **Models:** Logistic Regression, SVM, Multinomial Naive Bayes
-- **Metrics:** Accuracy, Precision, Recall, F1-score
+- **Current Model:** Logistic Regression (pre-trained)
+- **Status:** Model exists but NO training script available
 
 #### Multi-Issue Detection
 - Identifies multiple opinions/concerns within a single comment
 - Example: Comment may mention both teaching clarity AND speaking pace issues
+- Handled by multi-label classification approach
 
 #### Subcategory Classification (5 Categories)
 
-| Category | Description | Positive Keywords | Negative Keywords |
-|----------|-------------|-------------------|-------------------|
-| **Teaching Clarity** | Explanation quality, examples, logical flow | clear, well explained, understandable | confusing, unclear, difficult to follow |
-| **Speaking Pace** | Delivery speed, verbal presentation | clear voice, appropriate pace | too fast, rushed, too slow |
-| **Course Structure** | Organization, syllabus, assignments, workload | organized, structured, well planned | messy, disorganized, heavy workload |
-| **Communication Effectiveness** | Interaction, responsiveness, feedback | helpful, responsive, supportive | ignores questions, unresponsive |
-| **Professional Behavior** | Punctuality, fairness, respect, ethics | professional, respectful, fair | late, rude, unfair grading |
+| Category | Description | Examples |
+|----------|-------------|----------|
+| **Teaching Clarity** | Explanation quality, examples, logical flow | "clear explanations", "confusing lectures", "easy to understand" |
+| **Speaking Pace** | Delivery speed, verbal presentation, vocal clarity | "too fast", "clear voice", "appropriate pace", "mumbles" |
+| **Course Structure** | Organization, syllabus, assignments, workload | "well organized", "disorganized", "heavy workload", "structured" |
+| **Communication** | Responsiveness, feedback, answering questions | "helpful", "unresponsive", "available", "ignores questions" |
+| **Professional Behavior** | Punctuality, fairness, respect, ethics | "professional", "rude", "fair grading", "respectful" |
 
 ---
 
 ## Technical Architecture
 
-### Backend (Python/FastAPI)
+### Backend (Python + FastAPI)
+
+**Directory Structure:**
 ```
 backend/
-├── main.py              # FastAPI application & API endpoints
-├── analytics.py         # NLP analysis functions
+├── main.py              # FastAPI application & API endpoints (64 lines)
+├── analytics.py         # NLP analysis functions (13 lines)
 ├── requirements.txt     # Python dependencies
 ├── data/                # Dataset storage
-│   └── RateMyProfessor_Sample.csv
-└── models/              # Trained ML models
-    ├── vectorizer.pkl   # TF-IDF vectorizer
-    ├── sentiment_model.pkl  # Sentiment classifier
-    ├── category_model.pkl   # Category classifier
-    └── mlb.pkl          # MultiLabelBinarizer
+│   └── RateMyProfessor_Sample.csv  # Main dataset (10.8MB)
+└── models/              # Pre-trained ML models
+    ├── vectorizer.pkl   # TF-IDF vectorizer (197KB)
+    ├── sentiment_model.pkl  # Sentiment classifier (121KB)
+    ├── category_model.pkl   # Category classifier (283KB)
+    └── mlb.pkl          # MultiLabelBinarizer (602 bytes)
 ```
 
+**File Descriptions:**
+
+**[main.py](backend/main.py)** (64 lines)
+- FastAPI application with CORS support
+- Data loading from RateMyProfessor dataset
+- Three main API endpoints:
+  - `GET /professors` - List all professor names
+  - `GET /professor/{name}` - Get detailed analytics for a professor
+  - `GET /search` - Search professors by name
+- Data processing:
+  - Loads CSV data
+  - Renames columns (department_name→course, star_rating→quality, student_difficult→difficulty)
+  - Samples up to 50 comments per professor for NLP analysis
+  - Calculates average ratings and sentiment/category counts
+
+**[analytics.py](backend/analytics.py)** (13 lines)
+- Loads pre-trained models from `models/` directory
+- `analyze_text(text: str)` function:
+  - Input: Raw comment text
+  - Output: (sentiment_label, [category_list])
+  - Uses TF-IDF vectorization
+  - Predicts sentiment (positive/negative/neutral)
+  - Predicts categories (multi-label)
+
 ### Frontend (React)
+
+**Directory Structure:**
 ```
 frontend/
 ├── src/
-│   ├── App.jsx                    # Main application component
-│   ├── api.js                     # API client functions
+│   ├── App.jsx                    # Main application component (38 lines)
+│   ├── api.js                     # API client functions (8 lines)
+│   ├── index.js                   # React entry point
 │   └── components/
-│       ├── SearchBar.jsx          # Search functionality
-│       ├── ProfessorList.jsx      # List of professors
-│       ├── ProfessorCard.jsx      # Individual professor card
-│       └── Insights.jsx           # Analytics visualization
+│       ├── SearchBar.jsx          # Search functionality (17 lines)
+│       ├── ProfessorList.jsx      # List of professors (12 lines)
+│       ├── ProfessorCard.jsx      # Individual professor card (16 lines)
+│       └── Insights.jsx           # Analytics dashboard (33 lines)
+└── package.json                   # Node dependencies (React 19.2.4, Recharts 3.7.0)
 ```
+
+**File Descriptions:**
+
+**[App.jsx](frontend/src/App.jsx)** (38 lines)
+- Main React application component
+- State management:
+  - `profs` - List of all professors
+  - `selected` - Currently selected professor name
+  - `data` - Analytics data for selected professor
+- Functions:
+  - `selectProf(name)` - Fetches and displays professor analytics
+  - `search(q)` - Filters professor list by search query
+- Layout: Simple inline-styled UI with search, list, and insights
+
+**[api.js](frontend/src/api.js)** (8 lines)
+- Axios-based HTTP client
+- Base URL: `http://127.0.0.1:8000`
+- Functions:
+  - `getProfessors()` - Get all professor names
+  - `getProfessor(name)` - Get professor details
+  - `searchProf(q)` - Search professors
+
+**[Insights.jsx](frontend/src/components/Insights.jsx)** (33 lines)
+- Displays analytics for selected professor
+- Shows:
+  - Professor name
+  - Average rating
+  - Average difficulty
+  - Sentiment distribution bar chart
+  - Category breakdown bar chart
+- Uses Recharts library for visualization
+
+**[SearchBar.jsx](frontend/src/components/SearchBar.jsx)** (17 lines)
+- Simple search input component
+- Controlled input with search button
+
+**[ProfessorList.jsx](frontend/src/components/ProfessorList.jsx)** (12 lines)
+- Renders list of ProfessorCard components
+- Maps over professor array
+
+**[ProfessorCard.jsx](frontend/src/components/ProfessorCard.jsx)** (16 lines)
+- Clickable card for each professor
+- Triggers onSelect callback when clicked
 
 ### API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/professors` | GET | Get all professor names |
-| `/professor/{name}` | GET | Get detailed analytics for a professor |
-| `/search` | GET | Search professors by name |
+| Endpoint | Method | Description | Status |
+|----------|--------|-------------|--------|
+| `/professors` | GET | Get all professor names | ✅ Working |
+| `/professor/{name}` | GET | Get detailed analytics for a professor | ✅ Working |
+| `/search?q=query` | GET | Search professors by name | ✅ Working |
 
 ---
 
 ## Current Implementation Status
 
-### ✅ Completed Features
+### ✅ What Currently Works
 
 1. **Backend API**
-   - FastAPI server with CORS support
-   - Data loading from RateMyProfessor dataset
-   - Three main endpoints (professors list, professor details, search)
+   - ✅ FastAPI server runs on port 8000
+   - ✅ CORS enabled for React frontend
+   - ✅ Data loading from CSV (10.8MB dataset)
+   - ✅ Three basic endpoints operational
 
-2. **NLP Analysis Module**
-   - Text analysis using pre-trained models
-   - Sentiment prediction (Positive/Negative/Neutral)
-   - Multi-label category classification
-   - TF-IDF vectorization
+2. **NLP Analysis**
+   - ✅ Pre-trained models loaded successfully
+   - ✅ Sentiment prediction (positive/negative/neutral)
+   - ✅ Multi-label category classification (5 categories)
+   - ✅ TF-IDF vectorization
+   - ✅ Samples up to 50 comments per professor
 
-3. **Frontend Interface**
-   - React application with component-based architecture
-   - Search bar for finding professors
-   - Professor list display
-   - Analytics dashboard with:
-     - Average rating display
-     - Average difficulty display
-     - Sentiment distribution bar chart
-     - Category distribution bar chart
+3. **Frontend**
+   - ✅ React application (Create React App)
+   - ✅ Professor listing
+   - ✅ Search functionality
+   - ✅ Professor detail view
+   - ✅ Analytics dashboard with charts
 
-### ❌ Missing Critical Components
+### ❌ Critical Missing Components
 
-**⚠️ CRITICAL GAP:** Training scripts for NLP models do NOT exist
+**🔴 CRITICAL GAP: Training Scripts Do NOT Exist**
 
 The project has pre-trained model files (`.pkl`) but lacks:
-- **Training script for Sentiment Classification** (`train_sentiment.py`)
-- **Training script for Category Classification** (`train_categories.py`)
-- **Model evaluation script** (`evaluate_models.py`)
-- **Documentation on model training process**
+- ❌ **Training script for Sentiment Classification** (`train_sentiment.py`)
+- ❌ **Training script for Category Classification** (`train_categories.py`)
+- ❌ **Complete training pipeline** (`train_all.py`)
+- ❌ **Model evaluation script** (`evaluate_models.py`)
+- ❌ **Documentation on model training process**
 
-This means:
+**Impact:**
 - Models cannot be retrained with new data
 - No reproducibility of model creation
 - Cannot update models with additional datasets (Coursera)
 - Training methodology is undocumented
+- No evaluation metrics (accuracy, precision, recall, F1)
 
-### Data Processing Pipeline
+### ❌ Missing Features (from Project Proposal)
 
-```
-Raw CSV Data
-    ↓
-Filter & Rename Columns
-    ↓
-Sample Comments (max 50 per professor)
-    ↓
-TF-IDF Vectorization
-    ↓
-Sentiment Classification → [Positive, Negative, Neutral]
-    ↓
-Category Classification → [5 categories]
-    ↓
-Aggregation & Visualization
-```
+1. **No Trend Analysis**
+   - ❌ Cannot analyze rating trends over time
+   - ❌ Cannot predict future ratings
+   - ❌ No time-series visualization
+   - ❌ Missing Linear Regression implementation
+
+2. **No Comparison Features**
+   - ❌ Cannot compare multiple professors
+   - ❌ No ranking or top professors view
+   - ❌ No side-by-side analytics
+
+3. **No Data Integration**
+   - ❌ Using only RateMyProfessor data
+   - ❌ Cannot integrate Coursera dataset
+   - ❌ No combined dataset functionality
+
+4. **Limited Frontend**
+   - ❌ Basic UI only
+   - ❌ No view toggle (individual vs comparison)
+   - ❌ No trend charts
+   - ❌ No prediction displays
 
 ---
 
 ## Proposed Features
 
-### Core Features (Planned)
-- [x] Analysis of structured and unstructured evaluation data
-- [x] Automatic sentiment detection (positive/negative/neutral)
-- [x] Multi-label classification for comments with multiple issues
-- [x] Categorization into 5 analytical subcategories
-- [x] Aggregated reporting and visualization
-- [ ] **Predictive trend analysis for instructor/course popularity**
-- [ ] Time-series visualization of rating trends
-- [ ] Instructor comparison dashboard
+Based on the project proposal, the following features should be implemented:
 
-### Target Users
-1. **Students** – View course and teaching evaluation results
-2. **Instructors** – Review aggregated feedback for teaching improvement
-3. **Academic Administrators** – Support academic planning and quality assessment
-4. **Educational Institutions** – Enhance evaluation systems and quality assurance
+### Phase 1: Model Training Infrastructure (🔴 CRITICAL - Missing)
+- **Required Files:**
+  - `backend/train_sentiment.py` - Train sentiment classifier
+  - `backend/train_categories.py` - Train multi-label category classifier
+  - `backend/train_all.py` - Complete training pipeline
+  - `backend/evaluate_models.py` - Model testing and evaluation
+- **Benefits:**
+  - Enable model retraining
+  - Provide reproducibility
+  - Allow integration of new datasets
+  - Track model performance metrics
+
+### Phase 2: Trend Analysis & Prediction (🔴 HIGH PRIORITY - Missing)
+- **Required Files:**
+  - `backend/trend_analysis.py` - Linear regression trend analysis
+  - `frontend/src/components/TrendChart.jsx` - Trend visualization
+- **API Endpoints:**
+  - `GET /professor/{name}/trend` - Historical trend data
+  - `GET /professor/{name}/predict?periods=5` - Future predictions
+- **Features:**
+  - Time-series rating analysis
+  - Linear regression forecasting
+  - Trend direction indicators
+  - Confidence intervals
+
+### Phase 3: Comparison Features (🟡 MEDIUM PRIORITY - Missing)
+- **Required Files:**
+  - `frontend/src/components/ComparisonDashboard.jsx` - Comparison UI
+- **API Endpoints:**
+  - `GET /professors/compare?names=prof1,prof2` - Compare multiple professors
+  - `GET /professors/top?by=rating&n=10` - Top N professors
+- **Features:**
+  - Side-by-side professor comparison
+  - Ranking by various criteria
+  - Multi-dimensional radar charts
+  - Grouped bar charts
+
+### Phase 4: Data Integration (🟡 MEDIUM PRIORITY - Missing)
+- **Required Files:**
+  - `backend/data_loader.py` - Coursera dataset integration
+- **Features:**
+  - Load and normalize Coursera dataset
+  - Combine with RateMyProfessor data
+  - Expanded training data
+  - Improved model accuracy
 
 ---
 
 ## Development Milestones
 
-### Phase 1: Requirement Analysis and Data Preparation ✅
+### Phase 1: Requirement Analysis and Data Preparation ✅ COMPLETE
 - [x] Review evaluation system requirements
 - [x] Define analytical categories (5 subcategories)
-- [x] Prepare datasets (RateMyProfessor, Coursera)
+- [x] Prepare datasets (RateMyProfessor loaded)
+- [ ] ⚠️ Coursera dataset integration (pending)
 
-### Phase 2: Quantitative Data Analysis Module 🚧
-- [x] Basic statistical analysis (mean, distribution)
-- [ ] Comparative analysis across evaluation criteria
-- [ ] **Trend and Time-Series Analysis** (PENDING)
-- [ ] **Linear Regression for forecasting** (PENDING)
+### Phase 2: Quantitative Data Analysis Module ⚠️ PARTIAL
+- [x] Descriptive statistics (mean, distribution)
+- [x] Basic comparative analysis
+- [ ] ❌ Trend and Time-Series Analysis (NOT IMPLEMENTED)
+- [ ] ❌ Linear Regression for forecasting (NOT IMPLEMENTED)
 
-### Phase 3: NLP Model Development 🚧
-- [x] Sentiment classification model (pre-trained, no training script)
-- [x] Multi-label category classification model (pre-trained, no training script)
-- [x] TF-IDF vectorization (pre-trained, no training script)
-- [ ] **Training scripts for all models (CRITICAL - MISSING)**
-- [ ] Model evaluation and testing framework
-- [ ] Training documentation and reproducibility
-- [ ] Potential BERT fine-tuning for better accuracy (OPTIONAL)
+### Phase 3: NLP Model Development ⚠️ PARTIAL
+- [x] Pre-trained models exist
+- [ ] ❌ Training scripts MISSING
+- [ ] ❌ Model evaluation MISSING
+- [ ] ❌ Reproducibility NOT POSSIBLE
 
-### Phase 4: System Integration and Testing ✅
-- [x] Integrate quantitative and NLP-based analysis
+### Phase 4: System Integration and Testing ⚠️ PARTIAL
 - [x] Basic frontend-backend integration
-- [ ] Comprehensive testing with sample data
-- [ ] Performance evaluation
+- [x] API endpoints operational
+- [ ] ❌ Trend endpoints MISSING
+- [ ] ❌ Comparison endpoints MISSING
+- [ ] ⚠️ Limited testing
 
-### Phase 5: Result Analysis and Documentation 🚧
+### Phase 5: Result Analysis and Documentation ⚠️ PARTIAL
 - [x] Basic visualization of results
-- [ ] Advanced analytics dashboard
-- [ ] Final documentation
-- [ ] Presentation materials
+- [ ] ❌ Advanced analytics dashboard
+- [ ] ❌ Trend visualization
+- [ ] ⚠️ Documentation incomplete
 
 ---
 
 ## Datasets
 
-1. **RateMyProfessor.com Dataset**
-   - Source: Big data from professor teaching evaluations
-   - Fields: professor_name, department_name, star_rating, student_difficult, comments
-   - Current use: Main data source for testing
+### Current Dataset: RateMyProfessor Sample
 
-2. **Coursera Course Reviews Dataset**
-   - Size: 100K reviews
-   - Planned use: Additional training/testing data
+**File:** `backend/data/RateMyProfessor_Sample.csv`
+**Size:** ~10.8MB
+**Records:** ~100K+ professor reviews
+
+**Columns:**
+- `professor_name` - Name of the instructor
+- `department_name` → renamed to `course` - Course/department
+- `star_rating` → renamed to `quality` - 1-5 rating scale
+- `student_difficult` → renamed to `difficulty` - 1-5 difficulty scale
+- `comments` - Student feedback text (used for NLP analysis)
+
+**Data Processing:**
+- Columns renamed for consistency
+- Rows with missing values dropped
+- Up to 50 comments sampled per professor for NLP analysis
+
+### Optional Dataset: Coursera Reviews (NOT INTEGRATED)
+
+**File:** Would be `backend/data/Coursera_reviews.csv`
+**Size:** 100K reviews
+**Status:** Not integrated yet
+**Purpose:** Additional training data for improved model accuracy
 
 ---
 
 ## Technology Stack
 
 ### Backend
-- **Framework:** FastAPI
-- **Data Processing:** pandas
-- **NLP/ML:** scikit-learn, NLTK/spaCy
-- **Model Persistence:** joblib
+
+| Technology | Purpose |
+|------------|---------|
+| **Python** | Core language |
+| **FastAPI** | Web framework for API |
+| **pandas** | Data manipulation and analysis |
+| **scikit-learn** | ML models and vectorization |
+| **joblib** | Model persistence |
+| **numpy** | Numerical computing |
+
+**Dependencies:** See [backend/requirements.txt](backend/requirements.txt)
 
 ### Frontend
-- **Framework:** React
-- **Charts:** Recharts
-- **HTTP Client:** Axios
-- **Build Tool:** Vite/Create React App
 
-### AI/ML Models
-- **Vectorization:** TF-IDF
-- **Sentiment Classification:** Logistic Regression / SVM / Naive Bayes
-- **Category Classification:** Multi-label classifier with MultiLabelBinarizer
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **React** | 19.2.4 | UI framework |
+| **Create React App** | 5.0.1 | Build tool |
+| **Recharts** | 3.7.0 | Data visualization |
+| **Axios** | 1.13.6 | HTTP client |
 
----
-
-## Expected Results
-
-1. ✅ Functional analytic system processing both quantitative and qualitative data
-2. ✅ Clear identification of positive/negative sentiment trends
-3. ✅ Structured categorization of comments into actionable subcategories
-4. 🚧 **Predictive model for instructor/course popularity trends** (IN PROGRESS)
-5. ✅ Improved interpretability of student feedback
+**Dependencies:** See [frontend/package.json](frontend/package.json)
 
 ---
 
-## Limitations
+## System Capabilities
 
-1. **Data Quality Dependency**
-   - Accuracy depends on training data quality, diversity, and consistency
+### What the System Can Do NOW
 
-2. **Language Understanding**
-   - May struggle with sarcasm, irony, or implicit meanings
+1. **List Professors**
+   - Displays all unique professor names from dataset
+   - API: `GET /professors`
 
-3. **Predefined Categories**
-   - Feedback limited to predefined sentiment labels and 5 subcategories
-   - May not cover all possible issues
+2. **Search Professors**
+   - Filter professors by name (case-insensitive)
+   - API: `GET /search?q=query`
 
-4. **Dataset Coverage**
-   - Currently using RateMyProfessor data
-   - Coursera dataset not yet integrated
+3. **View Professor Analytics**
+   - Average quality rating (1-5 scale)
+   - Average difficulty rating (1-5 scale)
+   - List of courses taught
+   - Sentiment distribution (positive/negative/neutral counts)
+   - Category breakdown (5 subcategories with mention counts)
+   - API: `GET /professor/{name}`
+
+4. **Analyze Comments**
+   - Classify sentiment using pre-trained model
+   - Classify categories using multi-label model
+   - Sample up to 50 comments per professor
+   - Uses TF-IDF + Logistic Regression
+
+### What the System CANNOT Do YET
+
+1. **No Trend Analysis**
+   - Cannot see how ratings change over time
+   - Cannot identify upward/downward trends
+   - Cannot analyze temporal patterns
+
+2. **No Prediction**
+   - Cannot forecast future ratings
+   - Cannot predict instructor popularity
+   - Cannot estimate future performance
+
+3. **No Comparison**
+   - Cannot compare multiple professors
+   - Cannot rank or find top professors
+   - Cannot side-by-side analytics
+
+4. **No Retraining**
+   - Cannot retrain models with new data
+   - Cannot integrate Coursera dataset
+   - Cannot improve model accuracy
+   - Cannot evaluate model performance
+
+5. **No Advanced Visualization**
+   - No trend charts
+   - No prediction displays
+   - No comparison dashboards
+   - No radar charts or multi-dimensional plots
 
 ---
 
-## Key Files Reference
+## Known Limitations
 
-| File | Purpose | Lines |
-|------|---------|-------|
-| [backend/main.py](backend/main.py) | FastAPI server, API endpoints, data processing | 64 |
-| [backend/analytics.py](backend/analytics.py) | NLP model loading and text analysis | 13 |
-| [frontend/src/App.jsx](frontend/src/App.jsx) | Main React app, state management | 38 |
-| [frontend/src/components/Insights.jsx](frontend/src/components/Insights.jsx) | Analytics visualization with charts | 33 |
-| [frontend/src/components/SearchBar.jsx](frontend/src/components/SearchBar.jsx) | Search functionality | N/A |
-| [frontend/src/api.js](frontend/src/api.js) | API client functions | 8 |
+### 🔴 Critical Technical Limitations
+
+1. **Missing Training Infrastructure**
+   - **Issue:** No way to retrain or update models
+   - **Impact:** Cannot adapt to new data or improve accuracy
+   - **Severity:** CRITICAL - Blocks all model improvements
+   - **Fix Required:** Create training scripts (train_sentiment.py, train_categories.py, train_all.py)
+
+2. **No Trend Analysis**
+   - **Issue:** Cannot analyze temporal patterns
+   - **Impact:** Cannot identify changes in performance over time
+   - **Severity:** HIGH - Core project requirement not met
+   - **Fix Required:** Implement trend_analysis.py with Linear Regression
+
+3. **No Prediction Capability**
+   - **Issue:** Cannot forecast future performance
+   - **Impact:** Cannot meet project objective #5
+   - **Severity:** HIGH - Explicit project requirement
+   - **Fix Required:** Add prediction endpoints and visualization
+
+### 🟡 Medium Data Limitations
+
+4. **Single Data Source**
+   - **Issue:** Only RateMyProfessor data
+   - **Impact:** Limited training diversity
+   - **Severity:** MEDIUM - Coursera integration would help
+   - **Fix Required:** Create data_loader.py
+
+5. **No Date Field**
+   - **Issue:** No temporal information in dataset
+   - **Impact:** Cannot do trend analysis without synthetic data
+   - **Severity:** MEDIUM - Can work around with synthetic dates
+   - **Fix Required:** Add date generation or use alternative data
+
+### 🟢 Lower Model Limitations
+
+6. **Unknown Model Performance**
+   - **Issue:** No evaluation metrics available
+   - **Impact:** Don't know accuracy, precision, recall, F1
+   - **Severity:** MEDIUM - Cannot assess quality
+   - **Fix Required:** Create evaluate_models.py
+
+7. **Limited Context Understanding**
+   - **Issue:** May struggle with sarcasm, irony
+   - **Impact:** Misclassification of nuanced comments
+   - **Severity:** LOW - Common NLP limitation
+   - **Potential Fix:** BERT fine-tuning (optional)
+
+### 🟢 Infrastructure Limitations
+
+8. **No Reproducibility**
+   - **Issue:** Cannot reproduce model training
+   - **Impact:** Cannot verify or improve models
+   - **Severity:** HIGH - Academic/research requirement
+   - **Fix Required:** Training scripts with documentation
+
+9. **No Scalability**
+   - **Issue:** Sampling only 50 comments
+   - **Impact:** May miss important feedback
+   - **Severity:** LOW - Performance trade-off
+   - **Potential Fix:** Configurable sampling or full analysis
 
 ---
 
-## Next Steps (Prioritized)
+## How the System Currently Works
 
-1. **🔴 CRITICAL:** Create training scripts for NLP models (train_sentiment.py, train_categories.py)
-2. **🔴 CRITICAL:** Add model evaluation and testing framework
-3. **🔴 HIGH PRIORITY:** Implement trend prediction with Linear Regression
-4. **🔴 HIGH PRIORITY:** Add time-series visualization for rating trends
-5. **🟡 MEDIUM:** Integrate Coursera dataset for additional training
-6. **🟡 MEDIUM:** Add instructor comparison feature
-7. **🟢 LOW:** Explore BERT fine-tuning for improved accuracy
-8. **🟢 LOW:** Enhance UI/UX with more interactive dashboards
+### Backend Flow
 
----
-
-## 🎉 Implementation Complete - March 2026
-
-### ✅ All Critical Features Implemented!
-
-**Status:** All planned features from `plan.md` have been successfully implemented.
-
-#### Completed Sprints:
-
-| Sprint | Priority | Status | Key Deliverables |
-|--------|----------|--------|------------------|
-| Sprint 0 | 🔴 CRITICAL | ✅ Complete | NLP Training Scripts (4 files) |
-| Sprint 1 | 🔴 HIGH | ✅ Complete | Trend Analysis & Prediction (4 files) |
-| Sprint 2 | 🟡 MEDIUM | ✅ Complete | Comparison Dashboard (2 files) |
-| Sprint 3 | 🟡 MEDIUM | ✅ Complete | Data Integration (1 file) |
-
-#### New Files Created (13 total):
-
-**Backend (9 files):**
-- `train_sentiment.py` - Sentiment classification training
-- `train_categories.py` - Multi-label category training
-- `train_all.py` - Complete training pipeline
-- `evaluate_models.py` - Model testing framework
-- `trend_analysis.py` - Linear regression trend analysis
-- `data_loader.py` - Coursera data integration
-- `main.py` - Updated with new endpoints
-- `requirements.txt` - Updated dependencies
-
-**Frontend (4 files):**
-- `components/TrendChart.jsx` - Trend visualization
-- `components/TrendChart.css` - Trend chart styles
-- `components/ComparisonDashboard.jsx` - Professor comparison
-- `components/ComparisonDashboard.css` - Comparison styles
-- `App.jsx` - Updated with view toggle
-- `App.css` - Main app styles
-- `components/Insights.jsx` - Updated with trend integration
-- `components/Insights.css` - Enhanced insights styles
-
-#### Requirements Coverage:
-
-| Requirement | Status |
-|-------------|--------|
-| Analyze structured evaluation data | ✅ 100% |
-| Classify sentiment (pos/neg/neutral) | ✅ 100% |
-| Detect multiple issues | ✅ 100% |
-| 5 analytical subcategories | ✅ 100% |
-| **Predict future popularity trends** | ✅ **100% (NEW!)** |
-| Compare professors | ✅ 100% |
-| Training scripts | ✅ 100% (CRITICAL FIX) |
-| Reproducibility | ✅ 100% |
-
-#### Usage:
-
-```bash
-# 1. Train models (first time only)
-cd backend
-python train_all.py
-
-# 2. Start backend
-python main.py
-
-# 3. Start frontend (another terminal)
-cd frontend
-npm install
-npm run dev
+```
+1. Load CSV data (RateMyProfessor_Sample.csv - 10.8MB)
+   ↓
+2. Rename & clean columns
+   - department_name → course
+   - star_rating → quality
+   - student_difficult → difficulty
+   ↓
+3. API request received (e.g., GET /professor/{name})
+   ↓
+4. Filter data for requested professor
+   ↓
+5. Sample up to 50 comments (random sampling)
+   ↓
+6. For each comment:
+   - Vectorize with pre-trained TF-IDF vectorizer
+   - Predict sentiment (positive/negative/neutral)
+   - Predict categories (multi-label, up to 5)
+   ↓
+7. Aggregate results:
+   - Count sentiments
+   - Count categories
+   - Calculate averages
+   ↓
+8. Return JSON response
 ```
 
-See [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) for full details.
+### Frontend Flow
+
+```
+1. User searches for professor
+   ↓
+2. SearchBar.jsx calls onSearch(q)
+   ↓
+3. App.jsx calls searchProf(q)
+   ↓
+4. API call to GET /search?q=query
+   ↓
+5. Professor list updates with filtered results
+   ↓
+6. User selects professor from list
+   ↓
+7. ProfessorCard.jsx triggers onSelect(prof)
+   ↓
+8. App.jsx calls selectProf(name)
+   ↓
+9. API call to GET /professor/{name}
+   ↓
+10. Receive analytics data:
+    - avg_rating
+    - avg_difficulty
+    - courses
+    - sentiment_counts
+    - category_counts
+    ↓
+11. Insights.jsx renders:
+    - Professor info
+    - Rating stats
+    - Sentiment chart (Recharts BarChart)
+    - Category chart (Recharts BarChart)
+```
 
 ---
 
-*Last Updated: March 3, 2026*
-*Project Status: ✅ IMPLEMENTATION COMPLETE*
-*All Critical & High Priority Features Delivered*
+## Next Steps
+
+To complete the project according to the proposal, tasks are prioritized as follows:
+
+### 🔴 CRITICAL Priority (Must Complete)
+
+1. **Create NLP Model Training Scripts**
+   - `backend/train_sentiment.py` - Train sentiment classifier
+   - `backend/train_categories.py` - Train category classifier
+   - `backend/train_all.py` - Complete pipeline
+   - `backend/evaluate_models.py` - Testing framework
+   - **Why:** Cannot retrain, reproduce, or improve models without these
+   - **Impact:** Enables all future model improvements
+
+2. **Implement Trend Analysis**
+   - `backend/trend_analysis.py` - Linear regression
+   - Add synthetic date generation
+   - Create trend endpoints
+   - **Why:** Core project requirement (Objective #5)
+   - **Impact:** Enables prediction feature
+
+### 🔴 HIGH Priority (Should Complete)
+
+3. **Add Prediction Capability**
+   - Future rating prediction endpoint
+   - `frontend/src/components/TrendChart.jsx`
+   - Confidence intervals
+   - **Why:** Completes Objective #5
+   - **Impact:** Full requirements compliance
+
+4. **Model Evaluation Framework**
+   - Accuracy, precision, recall, F1-score
+   - Confusion matrices
+   - **Why:** Cannot assess model quality
+   - **Impact:** Validated research results
+
+### 🟡 MEDIUM Priority (Nice to Have)
+
+5. **Comparison Features**
+   - Professor comparison dashboard
+   - Top professors ranking
+   - **Why:** Enhanced analytics
+   - **Impact:** Better insights for users
+
+6. **Data Integration**
+   - Coursera dataset loader
+   - Combined dataset
+   - **Why:** Improved training data
+   - **Impact:** Better model accuracy
+
+### 🟢 LOW Priority (Optional)
+
+7. **UI/UX Improvements**
+   - Enhanced visualizations
+   - Better dashboards
+   - **Why:** User experience
+   - **Impact:** More polished application
+
+8. **BERT Fine-tuning**
+   - Advanced NLP model
+   - Better context understanding
+   - **Why:** Improved accuracy
+   - **Impact:** State-of-the-art performance
+
+---
+
+## Summary
+
+**Current State:** A working NLP-powered evaluation analytics system with basic sentiment analysis and categorization capabilities. The system successfully classifies feedback into 5 categories but lacks critical training infrastructure, trend analysis, and prediction features.
+
+**Critical Gap:** No training scripts exist, making model reproduction and improvement impossible.
+
+**Path Forward:** Prioritize creating training scripts and implementing trend analysis to meet all project requirements.
+
+---
+
+*Last Updated: March 4, 2026*
+*Project Status: Phase 3 (NLP Model Development) - Partially Complete*
+*Critical Gap: Training Scripts Missing*

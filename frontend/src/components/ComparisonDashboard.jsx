@@ -30,7 +30,7 @@ export default function ComparisonDashboard({ availableProfessors }) {
       setComparisonData(response.data);
     } catch (error) {
       console.error("Error comparing professors:", error);
-      alert("Failed to compare professors");
+      alert("Failed to compare professors. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,8 @@ export default function ComparisonDashboard({ availableProfessors }) {
 
   // Prepare chart data
   const getRatingChartData = () => {
-    if (!comparisonData) return [];
+    if (!comparisonData || !comparisonData.professors) return [];
+
     return comparisonData.professors.map(p => ({
       name: p.name.split(' ').pop(), // Last name only
       fullName: p.name,
@@ -53,7 +54,8 @@ export default function ComparisonDashboard({ availableProfessors }) {
   };
 
   const getPercentageChartData = () => {
-    if (!comparisonData) return [];
+    if (!comparisonData || !comparisonData.professors) return [];
+
     return comparisonData.professors.map(p => ({
       name: p.name.split(' ').pop(),
       fullName: p.name,
@@ -81,27 +83,26 @@ export default function ComparisonDashboard({ availableProfessors }) {
 
   return (
     <div className="comparison-dashboard">
-      <div className="comparison-header">
-        <h2>📊 Professor Comparison</h2>
-        <p className="comparison-subtitle">Compare up to 5 professors side by side</p>
-      </div>
-
-      {/* Professor Selection */}
+      {/* Selection Section */}
       <div className="selection-section">
         <div className="selection-header">
-          <h3>Select Professors to Compare</h3>
+          <h3>Select Professors to Compare (max 5)</h3>
           <div className="selection-actions">
-            <span className="selected-count">{selectedProfs.length}/5 selected</span>
+            <span className="selected-count">
+              {selectedProfs.length} / 5 selected
+            </span>
             {selectedProfs.length > 0 && (
-              <button className="btn-clear" onClick={clearSelection}>Clear All</button>
+              <button className="btn-clear" onClick={clearSelection}>
+                Clear
+              </button>
             )}
           </div>
         </div>
 
         <div className="professor-pool">
-          {availableProfsList.slice(0, 50).map((prof, i) => (
+          {availableProfsList.slice(0, 50).map(prof => (
             <button
-              key={i}
+              key={prof}
               className={`professor-chip ${selectedProfs.includes(prof) ? 'selected' : ''}`}
               onClick={() => toggleProfessor(prof)}
               disabled={!selectedProfs.includes(prof) && selectedProfs.length >= 5}
@@ -117,28 +118,56 @@ export default function ComparisonDashboard({ availableProfessors }) {
           onClick={handleCompare}
           disabled={selectedProfs.length < 2 || loading}
         >
-          {loading ? "Comparing..." : "Compare Now"}
+          {loading ? "Analyzing..." : "Compare Professors"}
         </button>
       </div>
 
-      {/* Comparison Results */}
-      {comparisonData && (
+      {/* Results Section */}
+      {comparisonData && comparisonData.professors && (
         <div className="comparison-results">
-          {/* Summary Table */}
+          {/* Summary Cards */}
+          <div className="summary-cards">
+            <div className="summary-card">
+              <div className="summary-label">Highest Rated</div>
+              <div className="summary-value">
+                🏆 {comparisonData.comparison.highest_rated}
+              </div>
+            </div>
+            <div className="summary-card">
+              <div className="summary-label">Easiest</div>
+              <div className="summary-value">
+                ⬇️ {comparisonData.comparison.easiest}
+              </div>
+            </div>
+            <div className="summary-card">
+              <div className="summary-label">Most Consistent</div>
+              <div className="summary-value">
+                📊 {comparisonData.comparison.most_consistent}
+              </div>
+            </div>
+          </div>
+
+          {/* Comparison Table */}
           <div className="comparison-table-card">
-            <h3>Summary Statistics</h3>
+            <h3>Comparison Table</h3>
             <div className="comparison-table">
               <div className="table-header">
-                <div className="table-cell">Professor</div>
-                <div className="table-cell">Rating</div>
-                <div className="table-cell">Difficulty</div>
-                <div className="table-cell">Reviews</div>
-                <div className="table-cell">Positive %</div>
+                <div>Professor</div>
+                <div>Rating</div>
+                <div>Difficulty</div>
+                <div>Reviews</div>
+                <div>Positive %</div>
               </div>
-              {comparisonData.professors.map((prof, i) => (
-                <div key={i} className={`table-row ${i === 0 ? 'top-ranked' : ''}`}>
+
+              {comparisonData.professors.map((prof, index) => (
+                <div
+                  key={prof.name}
+                  className={`table-row ${
+                    prof.name === comparisonData.comparison.highest_rated ? 'top-ranked' : ''
+                  }`}
+                >
                   <div className="table-cell">
-                    {i === 0 && <span className="rank-badge">🏆</span>}
+                    {prof.name === comparisonData.comparison.highest_rated && "🏆 "}
                     {prof.name}
                   </div>
                   <div className="table-cell">
@@ -156,68 +185,34 @@ export default function ComparisonDashboard({ availableProfessors }) {
 
           {/* Charts */}
           <div className="comparison-charts-grid">
-            {/* Rating & Difficulty Bar Chart */}
+            {/* Rating vs Difficulty Bar Chart */}
             <div className="chart-card-comparison">
               <h3>Rating vs Difficulty</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={getRatingChartData()} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={60} />
-                  <YAxis domain={[0, 5]} />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="custom-tooltip">
-                            <div style={{ fontWeight: 600, marginBottom: 8 }}>{data.fullName}</div>
-                            {payload.map(p => (
-                              <div key={p.dataKey} style={{ color: p.color }}>
-                                {p.dataKey}: {p.value}
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
+                <BarChart data={getRatingChartData()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 11 }} />
+                  <YAxis />
+                  <Tooltip />
                   <Legend />
-                  <Bar dataKey="rating" fill="#3b82f6" name="Average Rating" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="difficulty" fill="#8b5cf6" name="Avg Difficulty" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="rating" fill="#3b82f6" name="Rating" />
+                  <Bar dataKey="difficulty" fill="#8b5cf6" name="Difficulty" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Sentiment Percentage Chart */}
+            {/* Sentiment Bar Chart */}
             <div className="chart-card-comparison">
-              <h3>Sentiment Distribution</h3>
+              <h3>Sentiment Comparison</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={getPercentageChartData()} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={60} />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="custom-tooltip">
-                            <div style={{ fontWeight: 600, marginBottom: 8 }}>{data.fullName}</div>
-                            {payload.map(p => (
-                              <div key={p.dataKey} style={{ color: p.color }}>
-                                {p.name}: {p.value}%
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
+                <BarChart data={getPercentageChartData()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 11 }} />
+                  <YAxis />
+                  <Tooltip />
                   <Legend />
-                  <Bar dataKey="positive" fill="#10b981" name="Positive %" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="negative" fill="#ef4444" name="Negative %" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="positive" fill="#10b981" name="Positive %" />
+                  <Bar dataKey="negative" fill="#ef4444" name="Negative %" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -225,58 +220,58 @@ export default function ComparisonDashboard({ availableProfessors }) {
             {/* Radar Chart */}
             <div className="chart-card-comparison chart-card-full">
               <h3>Multi-Dimensional Comparison</h3>
-              <ResponsiveContainer width="100%" height={350}>
-                <RadarChart data={getRadarData()} margin={{ top: 20, right: 80, bottom: 20, left: 80 }}>
-                  <PolarGrid stroke="#e5e7eb" />
-                  <PolarAngleAxis dataKey="professor" tick={{ fontSize: 11 }} />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
+              <ResponsiveContainer width="100%" height={400}>
+                <RadarChart data={getRadarData()}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="professor" />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} />
                   <Radar
-                    name="Quality"
+                    name={comparisonData.professors[0]?.name}
                     dataKey="Quality"
                     stroke="#3b82f6"
                     fill="#3b82f6"
-                    fillOpacity={0.3}
+                    fillOpacity={0.6}
                   />
                   <Radar
-                    name="Easiness"
+                    name={comparisonData.professors[0]?.name}
                     dataKey="Easiness"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.3}
+                    stroke="#3b82f6"
+                    fill="#3b82f6"
+                    fillOpacity={0.6}
                   />
                   <Radar
-                    name="Positive Feedback"
+                    name={comparisonData.professors[0]?.name}
                     dataKey="Positive"
-                    stroke="#f59e0b"
-                    fill="#f59e0b"
-                    fillOpacity={0.3}
+                    stroke="#3b82f6"
+                    fill="#3b82f6"
+                    fillOpacity={0.6}
                   />
-                  <Radar
-                    name="Consistency"
-                    dataKey="Consistency"
-                    stroke="#8b5cf6"
-                    fill="#8b5cf6"
-                    fillOpacity={0.3}
-                  />
+                  {comparisonData.professors.slice(1).map((prof, index) => (
+                    <g key={prof.name}>
+                      <Radar
+                        name={prof.name}
+                        dataKey="Quality"
+                        stroke={COLORS[index % COLORS.length]}
+                        fill={COLORS[index % COLORS.length]}
+                        fillOpacity={0.3}
+                      />
+                      <Radar
+                        name={prof.name}
+                        dataKey="Easiness"
+                        stroke={COLORS[index % COLORS.length]}
+                        fill={COLORS[index % COLORS.length]}
+                        fillOpacity={0.3}
+                      />
+                      <Radar
+                        name={prof.name}
+                        dataKey="Positive"
+                        stroke={COLORS[index % COLORS.length]}
+                        fill={COLORS[index % COLORS.length]}
+                        fillOpacity={0.3}
+                      />
+                    </g>
+                  ))}
                   <Legend />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="custom-tooltip">
-                            <div style={{ fontWeight: 600, marginBottom: 8 }}>{data.fullName}</div>
-                            {payload.map(p => (
-                              <div key={p.dataKey} style={{ color: p.color }}>
-                                {p.name}: {p.value.toFixed(1)}
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
@@ -284,11 +279,15 @@ export default function ComparisonDashboard({ availableProfessors }) {
         </div>
       )}
 
-      {selectedProfs.length > 0 && !comparisonData && (
+      {!comparisonData && (
         <div className="compare-prompt">
-          <p>Click "Compare Now" to see the comparison results</p>
+          <div className="compare-icon">📊</div>
+          <div>Select 2 or more professors and click "Compare Professors" to see the analysis</div>
         </div>
       )}
     </div>
   );
 }
+
+// Color palette for radar chart
+const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4'];

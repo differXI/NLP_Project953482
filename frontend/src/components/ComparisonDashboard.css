@@ -6,24 +6,6 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.comparison-header {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.comparison-header h2 {
-  margin: 0 0 8px 0;
-  color: #1f2937;
-  font-size: 24px;
-}
-
-.comparison-subtitle {
-  margin: 0;
-  color: #6b7280;
-  font-size: 14px;
-}
-
 .selection-section {
   margin-bottom: 24px;
 }
@@ -38,7 +20,7 @@
 .selection-header h3 {
   margin: 0;
   color: #374151;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
 }
 
@@ -79,17 +61,20 @@
   transition: all 0.2s;
   position: relative;
   padding-right: 32px;
+  font-weight: 500;
 }
 
 .professor-chip:hover:not(:disabled) {
   border-color: #3b82f6;
   background: #eff6ff;
+  transform: translateY(-1px);
 }
 
 .professor-chip.selected {
   background: #3b82f6;
   color: white;
   border-color: #3b82f6;
+  font-weight: 600;
 }
 
 .professor-chip:disabled {
@@ -112,6 +97,7 @@
   color: #ef4444;
   border-radius: 6px;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -149,17 +135,47 @@
   margin-top: 24px;
 }
 
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  padding: 16px;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.summary-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
 .comparison-table-card {
   margin-bottom: 24px;
   padding: 20px;
   background: #f9fafb;
   border-radius: 12px;
+  border: 1px solid #e5e7eb;
 }
 
 .comparison-table-card h3 {
   margin: 0 0 16px 0;
   color: #1f2937;
   font-size: 18px;
+  font-weight: 600;
 }
 
 .comparison-table {
@@ -189,6 +205,11 @@
   border-radius: 8px;
   font-size: 13px;
   color: #4b5563;
+  transition: all 0.2s;
+}
+
+.table-row:hover {
+  background: #f9fafb;
 }
 
 .table-row.top-ranked {
@@ -223,10 +244,6 @@
   text-align: center;
 }
 
-.rank-badge {
-  margin-right: 8px;
-}
-
 .comparison-charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -253,18 +270,14 @@
 
 .compare-prompt {
   text-align: center;
-  padding: 40px;
-  color: #6b7280;
+  padding: 60px 40px;
+  color: #9ca3af;
   font-size: 14px;
 }
 
-.custom-tooltip {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  font-size: 13px;
+.compare-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
 }
 
 @media (max-width: 768px) {
@@ -276,6 +289,7 @@
   .table-row {
     grid-template-columns: 1fr;
     gap: 4px;
+    font-size: 12px;
   }
 
   .table-cell {
@@ -284,5 +298,9 @@
 
   .professor-pool {
     max-height: 150px;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
   }
 }

@@ -4,7 +4,6 @@ import SearchBar from "./components/SearchBar";
 import ProfessorList from "./components/ProfessorList";
 import Insights from "./components/Insights";
 import ComparisonDashboard from "./components/ComparisonDashboard";
-import "./App.css";
 
 function App() {
   const [profs, setProfs] = useState([]);
@@ -15,11 +14,11 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState("individual"); // "individual" or "comparison"
 
-  useEffect(()=>{
-    getProfessors().then(r=>setProfs(r.data));
-  },[]);
+  useEffect(() => {
+    getProfessors().then(r => setProfs(r.data));
+  }, []);
 
-  const selectProf = async (name)=>{
+  const selectProf = async (name) => {
     setView("individual");
     setSelected(name);
     setLoading(true);
@@ -45,42 +44,68 @@ function App() {
     }
   };
 
-  const search = (q)=>{
-    searchProf(q).then(r=>setProfs(r.data));
+  const search = (q) => {
+    searchProf(q).then(r => setProfs(r.data));
   };
 
   return (
-    <div className="app">
-      <div className="app-container">
-        <header className="app-header">
-          <h1 className="app-title">
+    <div style={{ padding: 20, fontFamily: 'Arial, sans-serif', background: '#f9fafb', minHeight: '100vh' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <header style={{ marginBottom: 30, textAlign: 'center' }}>
+          <h1 style={{ color: '#1f2937', marginBottom: 8 }}>
             📊 Course & Instructor Evaluation Analytics
           </h1>
-          <p className="app-subtitle">
+          <p style={{ color: '#6b7280', fontSize: 14 }}>
             NLP-powered sentiment analysis, trend prediction, and multi-label categorization
           </p>
         </header>
 
-        <div className="search-section">
-          <SearchBar onSearch={search}/>
+        <div style={{ marginBottom: 20 }}>
+          <SearchBar onSearch={search} />
         </div>
 
-        <div className="main-content">
-          <aside className="sidebar">
-            <ProfessorList profs={profs} onSelect={selectProf} selected={selected}/>
-          </aside>
+        <div style={{ display: 'flex', gap: 20 }}>
+          <div style={{ flex: '0 0 300px' }}>
+            <ProfessorList profs={profs} onSelect={selectProf} selected={selected} />
+          </div>
 
-          <main className="content-area">
+          <div style={{ flex: 1 }}>
             {/* View Toggle */}
-            <div className="view-toggle">
+            <div style={{
+              display: 'flex',
+              gap: 12,
+              marginBottom: 20,
+              background: '#f3f4f6',
+              padding: '6px',
+              borderRadius: '12px',
+              width: 'fit-content'
+            }}>
               <button
-                className={`view-tab ${view === "individual" ? "active" : ""}`}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: view === 'individual' ? 'white' : 'transparent',
+                  color: view === 'individual' ? '#3b82f6' : '#6b7280',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
                 onClick={() => setView("individual")}
               >
                 👤 Individual Professor
               </button>
               <button
-                className={`view-tab ${view === "comparison" ? "active" : ""}`}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: view === 'comparison' ? 'white' : 'transparent',
+                  color: view === 'comparison' ? '#3b82f6' : '#6b7280',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
                 onClick={() => setView("comparison")}
               >
                 📊 Compare Professors
@@ -91,15 +116,15 @@ function App() {
             {view === "individual" && (
               <>
                 {loading && (
-                  <div className="loading-state">
+                  <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
                     Loading professor data...
                   </div>
                 )}
 
                 {!loading && !data && (
-                  <div className="empty-state">
-                    <div className="empty-icon">👈</div>
-                    <div className="empty-text">Select a professor to view analytics</div>
+                  <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>👈</div>
+                    <div>Select a professor to view analytics</div>
                   </div>
                 )}
 
@@ -117,7 +142,7 @@ function App() {
             {view === "comparison" && (
               <ComparisonDashboard availableProfessors={profs} />
             )}
-          </main>
+          </div>
         </div>
       </div>
     </div>

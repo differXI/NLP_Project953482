@@ -1,83 +1,146 @@
+"""
+Complete NLP Model Training Pipeline
+
+Trains both sentiment and category classification models in one go.
+Run this script to train all models from scratch.
+"""
+
 import subprocess
-import datetime
 import sys
 import os
+from datetime import datetime
 
-def run_training():
+
+def run_command(command, description):
+    """Run a command and handle errors"""
+    print(f"\n{'='*60}")
+    print(f"{description}")
+    print(f"{'='*60}")
+
+    try:
+        result = subprocess.run(
+            command,
+            shell=True,
+            check=True,
+            capture_output=False,
+            text=True
+        )
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"\nERROR: {description} failed!")
+        print(f"Return code: {e.returncode}")
+        return False
+
+
+def main():
     """Run complete training pipeline"""
-
-    print("=" * 70)
+    print("\n" + "="*60)
     print(" " * 15 + "NLP MODEL TRAINING PIPELINE")
-    print("=" * 70)
-    print(f"Started at: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-
-    # Ensure we're in the backend directory
-    backend_dir = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(backend_dir)
-    print(f"Working directory: {os.getcwd()}")
-    print(f"Data path: data/RateMyProfessor_Sample.csv")
-    print(f"Models path: models/\n")
+    print("="*60)
+    print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Check if data file exists
-    if not os.path.exists('data/RateMyProfessor_Sample.csv'):
-        print("ERROR: data/RateMyProfessor_Sample.csv not found!")
-        print("Please ensure the data file is in the data/ directory.")
+    data_path = "data/RateMyProfessor_Sample.csv"
+    if not os.path.exists(data_path):
+        print(f"\nERROR: Data file not found: {data_path}")
+        print("Please ensure the data file is in the correct location.")
         sys.exit(1)
 
-    # Train sentiment model
-    print("\n" + "=" * 70)
-    print("[1/2] Training Sentiment Model...")
-    print("=" * 70)
-    result1 = subprocess.run([sys.executable, "train_sentiment.py"],
-                           capture_output=False, text=True)
+    print(f"\nData file: {data_path}")
 
-    if result1.returncode != 0:
-        print("\n" + "!" * 70)
-        print("ERROR: Sentiment training failed!")
-        print("!" * 70)
+    # Get file size
+    file_size = os.path.getsize(data_path) / (1024 * 1024)  # Convert to MB
+    print(f"File size: {file_size:.2f} MB")
+
+    # Ask for confirmation if training from scratch
+    print("\n" + "="*60)
+    print("WARNING: This will overwrite existing models!")
+    print("="*60)
+    response = input("\nDo you want to continue? (yes/no): ").strip().lower()
+
+    if response not in ['yes', 'y']:
+        print("\nTraining cancelled.")
+        return
+
+    # Step 1: Train Sentiment Model
+    print("\n" + "="*60)
+    print("STEP 1: Train Sentiment Classification Model")
+    print("="*60)
+
+    success = run_command(
+        f"{sys.executable} train_sentiment.py {data_path}",
+        "Training Sentiment Model..."
+    )
+
+    if not success:
+        print("\nFATAL: Sentiment model training failed!")
+        print("Cannot continue with category training.")
         sys.exit(1)
 
-    print("\n" + "✓" * 70)
-    print("Sentiment model training completed successfully!")
-    print("✓" * 70)
+    # Step 2: Train Category Model
+    print("\n" + "="*60)
+    print("STEP 2: Train Category Classification Model")
+    print("="*60)
 
-    # Train category model
-    print("\n" + "=" * 70)
-    print("[2/2] Training Category Model...")
-    print("=" * 70)
-    result2 = subprocess.run([sys.executable, "train_categories.py"],
-                           capture_output=False, text=True)
+    success = run_command(
+        f"{sys.executable} train_categories.py {data_path}",
+        "Training Category Model..."
+    )
 
-    if result2.returncode != 0:
-        print("\n" + "!" * 70)
-        print("ERROR: Category training failed!")
-        print("!" * 70)
+    if not success:
+        print("\nFATAL: Category model training failed!")
         sys.exit(1)
 
-    print("\n" + "✓" * 70)
-    print("Category model training completed successfully!")
-    print("✓" * 70)
+    # Success!
+    print("\n" + "="*60)
+    print(" " * 20 + "TRAINING COMPLETE!")
+    print("="*60)
 
-    print("\n" + "=" * 70)
-    print(" " * 20 + "ALL TRAINING COMPLETE!")
-    print("=" * 70)
-    print(f"Finished at: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("\nModels saved:")
-    print("  • models/vectorizer.pkl")
-    print("  • models/sentiment_model.pkl")
-    print("  • models/category_model.pkl")
-    print("  • models/mlb.pkl")
-    print("\nYou can now:")
-    print("  • Run evaluate_models.py to test the models")
-    print("  • Start the FastAPI server with: python main.py")
-    print("=" * 70)
+    print(f"\nFinished at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    print("\n" + "="*60)
+    print ("TRAINED MODELS")
+    print("="*60)
+
+    model_files = [
+        ("models/vectorizer.pkl", "TF-IDF Vectorizer"),
+        ("models/sentiment_model.pkl", "Sentiment Classifier"),
+        ("models/category_model.pkl", "Category Classifier"),
+        ("models/mlb.pkl", "MultiLabelBinarizer")
+    ]
+
+    all_exist = True
+    for filepath, description in model_files:
+        exists = os.path.exists(filepath)
+        status = "✓" if exists else "✗"
+        print(f"{status} {description:40} ({filepath})")
+        if not exists:
+            all_exist = False
+
+    if all_exist:
+        print("\n" + "="*60)
+        print("SUCCESS: All models trained and saved!")
+        print("="*60)
+        print("\nYou can now:")
+        print("  1. Run the backend: python main.py")
+        print("  2. Test models: python evaluate_models.py")
+        print("  3. Start the frontend: cd ../frontend && npm start")
+    else:
+        print("\n" + "="*60)
+        print("WARNING: Some model files are missing!")
+        print("="*60)
+
+    print("\n")
+
 
 if __name__ == "__main__":
     try:
-        run_training()
+        main()
     except KeyboardInterrupt:
         print("\n\nTraining interrupted by user.")
         sys.exit(1)
     except Exception as e:
         print(f"\n\nERROR: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)

@@ -4,7 +4,6 @@ from pydantic import BaseModel
 from typing import List, Optional
 import pandas as pd
 import numpy as np
-from datetime import datetime
 from analytics import analyze_text
 from trend_analysis import (
     analyze_rating_trend,
@@ -27,26 +26,14 @@ app.add_middleware(
 # Load data
 DATA_PATH = "data/RateMyProfessor_Sample.csv"
 df_raw = pd.read_csv(DATA_PATH)
+
+# Select and rename columns
 df = df_raw[['professor_name','department_name','star_rating','student_difficult','comments']].dropna()
 df = df.rename(columns={
     "department_name": "course",
     "star_rating": "quality",
     "student_difficult": "difficulty"
 })
-
-# Add synthetic date column for trend analysis if not present
-if 'post_date' not in df.columns:
-    # Create synthetic dates spread over 2 years
-    np.random.seed(42)
-    n_samples = len(df)
-    start_date = datetime(2022, 1, 1)
-    end_date = datetime(2024, 1, 1)
-    random_dates = pd.to_datetime(np.random.uniform(
-        start_date.timestamp(),
-        end_date.timestamp(),
-        n_samples
-    ), unit='s')
-    df['post_date'] = random_dates
 
 # ========= ALL PROFESSORS =========
 @app.get("/professors")
@@ -187,7 +174,16 @@ def health_check():
         "status": "healthy",
         "total_professors": df["professor_name"].nunique(),
         "total_ratings": len(df),
-        "datasets": ["RateMyProfessor"]
+        "datasets": ["RateMyProfessor"],
+        "endpoints": {
+            "professors": "/professors",
+            "professor_detail": "/professor/{name}",
+            "professor_trend": "/professor/{name}/trend",
+            "professor_predict": "/professor/{name}/predict",
+            "search": "/search?q=query",
+            "compare": "/professors/compare",
+            "top": "/professors/top"
+        }
     }
 
 # ========= ROOT =========
@@ -197,6 +193,7 @@ def root():
     return {
         "name": "Course & Instructor Evaluation Analytics API",
         "version": "1.0.0",
+        "description": "NLP-powered sentiment analysis, trend prediction, and multi-label categorization",
         "endpoints": {
             "professors": "/professors",
             "professor_detail": "/professor/{name}",

@@ -1,312 +1,356 @@
+"""
+Trend Analysis and Prediction Module
+
+Provides functions for:
+- Analyzing rating trends over time
+- Predicting future ratings using Linear Regression
+- Comparing multiple professors
+- Finding top professors by various criteria
+"""
+
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from datetime import datetime, timedelta
-from typing import List, Tuple, Dict
-import os
+from typing import Dict, List, Optional
 
-def load_data():
-    """Load the dataset"""
-    DATA_PATH = "data/RateMyProfessor_Sample.csv"
-    if not os.path.exists(DATA_PATH):
-        raise FileNotFoundError(f"{DATA_PATH} not found!")
 
-    df = pd.read_csv(DATA_PATH)
-    df = df[['professor_name', 'star_rating', 'student_difficult', 'comments']].dropna()
-    df = df.rename(columns={
-        "star_rating": "quality",
-        "student_difficult": "difficulty"
-    })
+def add_synthetic_dates(df):
+    """
+    Add synthetic date column if not present
 
-    # Add a synthetic date column if not present (for demonstration)
-    # In real scenario, you would have actual post_date
-    if 'post_date' not in df.columns:
-        # Create synthetic dates based on index (simulate time series)
-        # Spread ratings over 2 years period
-        n_samples = len(df)
-        start_date = datetime(2022, 1, 1)
-        end_date = datetime(2024, 1, 1)
+    Args:
+        df: DataFrame with professor data
 
-        # Assign random dates weighted to be more recent
-        random_dates = pd.to_datetime(np.random.uniform(
-            start_date.timestamp(),
-            end_date.timestamp(),
-            n_samples
-        ), unit='s')
+    Returns:
+        DataFrame with post_date column added
+    """
+    if 'post_date' in df.columns:
+        return df
 
-        df['post_date'] = random_dates
+    # Create synthetic dates spread over 2 years
+    np.random.seed(42)
+    n_samples = len(df)
+    start_date = datetime(2022, 1, 1)
+    end_date = datetime(2024, 1, 1)
+
+    random_dates = pd.to_datetime(np.random.uniform(
+        start_date.timestamp(),
+        end_date.timestamp(),
+        n_samples
+    ), unit='s')
+
+    df = df.copy()
+    df['post_date'] = random_dates
 
     return df
 
-def analyze_rating_trend(professor_name: str, df: pd.DataFrame = None) -> Dict:
+
+def analyze_rating_trend(professor_name: str, df):
     """
-    Analyze trend ของ rating ตามเวลา
+    Analyze rating trend for a specific professor
 
     Args:
-        professor_name: ชื่ออาจารย์
-        df: DataFrame (optional, will load if not provided)
+        professor_name: Name of the professor
+        df: Full dataset DataFrame
 
     Returns:
-        Dictionary ที่มี:
-        - dates: list of dates
-        - ratings: list of actual ratings
-        - trend_line: list of trend values
-        - r_squared: R² score
-        - slope: trend slope (positive = increasing, negative = decreasing)
-        - trend_direction: 'increasing', 'decreasing', or 'stable'
+        Dictionary containing trend analysis results
     """
-    if df is None:
-        df = load_data()
+    # Check if professor exists
+    pdf = df[df['professor_name'] == professor_name]
 
-    # Filter for specific professor
-    pdf = df[df["professor_name"] == professor_name].copy()
-
-    if len(pdf) < 3:
+    if len(pdf) == 0:
         return {
-            "error": f"Not enough data for {professor_name} (need at least 3 ratings)"
+            "error": f"Professor '{professor_name}' not found",
+            "available_professors": df['professor_name'].unique().tolist()[:10]
+        }
+
+    # Ensure we have date column
+    pdf = add_synthetic_dates(pdf)
+
+    # Group by month for trend analysis
+    pdf['year_month'] = pd.to_datetime(pdf['post_date']).dt.to_period('M')
+
+    # Calculate monthly averages
+    monthly_data = pdf.groupby('year_month').agg({
+        'quality': ['mean', 'count']
+    }).reset_index()
+
+    monthly_data.columns = ['year_month', 'avg_rating', 'num_ratings']
+
+    # Filter to ensure we have enough data points
+    if len(monthly_data) < 3:
+        return {
+            "error": f"Not enough data points for '{professor_name}'. Only {len(monthly_data)} months of data.",
+            "min_months_required": 3
         }
 
     # Sort by date
-    pdf = pdf.sort_values('post_date')
+    monthly_data = monthly_data.sort_values('year_month')
+    monthly_data['year_month'] = monthly_data['year_month'].astype(str)
 
-    # Convert dates to numeric (days since first date)
-    pdf['days_since_start'] = (pdf['post_date'] - pdf['post_date'].iloc[0]).dt.days
-
-    # Get ratings
-    ratings = pdf['quality'].values
-    days = pdf['days_since_start'].values.reshape(-1, 1)
+    # Prepare data for regression
+    X = np.arange(len(monthly_data)).reshape(-1, 1)
+    y = monthly_data['avg_rating'].values
 
     # Fit linear regression
     model = LinearRegression()
-    model.fit(days, ratings)
+    model.fit(X, y)
 
     # Calculate trend line
-    trend_line = model.predict(days)
+    trend_line = model.predict(X)
 
-    # Calculate R²
-    ss_res = ((ratings - trend_line) ** 2).sum()
-    ss_tot = ((ratings - ratings.mean()) ** 2).sum()
+    # Calculate R-squared
+    y_mean = np.mean(y)
+    ss_tot = np.sum((y - y_mean) ** 2)
+    ss_res = np.sum((y - trend_line) ** 2)
     r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
 
     # Determine trend direction
     slope = model.coef_[0]
-    slope_scaled = slope * 30  # Scale to monthly change
-
-    if slope_scaled > 0.05:
+    if slope > 0.01:
         trend_direction = "increasing"
-        trend_percentage = f"+{slope_scaled * 100:.1f}%"
-    elif slope_scaled < -0.05:
+    elif slope < -0.01:
         trend_direction = "decreasing"
-        trend_percentage = f"{slope_scaled * 100:.1f}%"
     else:
         trend_direction = "stable"
-        trend_percentage = "±0.0%"
+
+    # Calculate percentage change
+    if len(y) >= 2:
+        first_avg = y[0]
+        last_avg = y[-1]
+        trend_percentage = ((last_avg - first_avg) / first_avg) * 100
+    else:
+        trend_percentage = 0
 
     return {
         "professor": professor_name,
-        "dates": pdf['post_date'].dt.strftime('%Y-%m-%d').tolist(),
-        "ratings": ratings.tolist(),
+        "dates": monthly_data['year_month'].tolist(),
+        "ratings": monthly_data['avg_rating'].tolist(),
+        "num_ratings_per_month": monthly_data['num_ratings'].tolist(),
         "trend_line": trend_line.tolist(),
-        "r_squared": round(r_squared, 3),
-        "slope": round(slope, 4),
-        "slope_monthly": round(slope_scaled, 4),
         "trend_direction": trend_direction,
-        "trend_percentage": trend_percentage,
-        "data_points": len(pdf)
+        "trend_percentage": round(trend_percentage, 2),
+        "model_quality": {
+            "r_squared": round(r_squared, 3),
+            "slope": round(slope, 4)
+        },
+        "data_points": len(monthly_data)
     }
 
-def predict_future_rating(professor_name: str, periods: int = 5,
-                          df: pd.DataFrame = None) -> Dict:
+
+def predict_future_rating(professor_name: str, periods: int, df):
     """
-    ทำนาย rating ในอนาคตด้วย Linear Regression
+    Predict future ratings using Linear Regression
 
     Args:
-        professor_name: ชื่ออาจารย์
-        periods: จำนวนคาบเวลาที่ต้องการทำนาย (default: 5 future data points)
-        df: DataFrame (optional)
+        professor_name: Name of the professor
+        periods: Number of future periods to predict
+        df: Full dataset DataFrame
 
     Returns:
-        Dictionary ที่มี:
-        - historical_dates: past dates
-        - historical_ratings: past actual ratings
-        - historical_trend: past trend line
-        - future_dates: predicted future dates
-        - predicted_ratings: predicted future ratings
-        - confidence_interval: lower/upper bounds
+        Dictionary containing prediction results
     """
-    if df is None:
-        df = load_data()
-
-    # Get trend analysis first
+    # Get historical trend data first
     trend_result = analyze_rating_trend(professor_name, df)
 
     if "error" in trend_result:
         return trend_result
 
-    pdf = df[df["professor_name"] == professor_name].copy()
-    pdf = pdf.sort_values('post_date')
+    # Prepare historical data
+    dates = trend_result["dates"]
+    ratings = trend_result["ratings"]
 
-    # Calculate average time gap between ratings
-    pdf['days_since_start'] = (pdf['post_date'] - pdf['post_date'].iloc[0]).dt.days
+    # Create numerical X values
+    X = np.arange(len(dates)).reshape(-1, 1)
+    y = np.array(ratings)
 
-    # Fit model on all data
+    # Fit model
     model = LinearRegression()
-    X = pdf['days_since_start'].values.reshape(-1, 1)
-    y = pdf['quality'].values
     model.fit(X, y)
 
-    # Calculate prediction interval (simple version using std of residuals)
-    predictions = model.predict(X)
-    residuals = y - predictions
-    std_error = np.std(residuals)
-    confidence_margin = 1.96 * std_error  # 95% confidence
+    # Predict future periods
+    last_x = len(dates) - 1
+    future_x = np.arange(last_x + 1, last_x + 1 + periods).reshape(-1, 1)
+    future_predictions = model.predict(future_x)
 
-    # Generate future dates
-    last_date = pdf['post_date'].iloc[-1]
-    avg_gap_days = (pdf['post_date'].iloc[-1] - pdf['post_date'].iloc[0]).days / (len(pdf) - 1)
+    # Calculate confidence intervals (using residual standard error)
+    residuals = y - model.predict(X)
+    std_error = np.sqrt(np.sum(residuals**2) / (len(y) - 2))
+    margin = 1.96 * std_error  # 95% confidence interval
 
-    future_dates = []
-    future_days = []
+    lower_bound = future_predictions - margin
+    upper_bound = future_predictions + margin
 
-    for i in range(1, periods + 1):
-        next_date = last_date + timedelta(days=avg_gap_days * i)
-        future_dates.append(next_date.strftime('%Y-%m-%d'))
-        future_days.append((next_date - pdf['post_date'].iloc[0]).days)
-
-    # Predict future ratings
-    future_X = np.array(future_days).reshape(-1, 1)
-    predicted_ratings = model.predict(future_X)
-
-    # Calculate confidence intervals
-    lower_bound = predicted_ratings - confidence_margin
-    upper_bound = predicted_ratings + confidence_margin
+    # Clip to valid rating range [1, 5]
+    future_predictions = np.clip(future_predictions, 1, 5)
     lower_bound = np.clip(lower_bound, 1, 5)
     upper_bound = np.clip(upper_bound, 1, 5)
 
+    # Generate future dates (monthly)
+    last_date_str = dates[-1]
+    last_date = pd.to_datetime(last_date_str)
+
+    future_dates = []
+    for i in range(1, periods + 1):
+        next_date = last_date + pd.DateOffset(months=i)
+        future_dates.append(next_date.strftime('%Y-%m'))
+
     return {
         "professor": professor_name,
+        "periods_predicted": periods,
         "historical": {
-            "dates": pdf['post_date'].dt.strftime('%Y-%m-%d').tolist(),
-            "ratings": y.tolist(),
-            "trend_line": predictions.tolist()
+            "dates": dates,
+            "ratings": ratings,
+            "trend_line": trend_result["trend_line"]
         },
         "future": {
             "dates": future_dates,
-            "predicted_ratings": predicted_ratings.tolist(),
-            "lower_bound": lower_bound.tolist(),
-            "upper_bound": upper_bound.tolist()
+            "predicted_ratings": np.round(future_predictions, 2).tolist(),
+            "lower_bound": np.round(lower_bound, 2).tolist(),
+            "upper_bound": np.round(upper_bound, 2).tolist()
         },
-        "next_semester_prediction": round(float(predicted_ratings[0]), 2),
-        "confidence": 95,
-        "model_quality": {
-            "r_squared": trend_result["r_squared"],
-            "trend_direction": trend_result["trend_direction"]
-        }
+        "model_quality": trend_result["model_quality"],
+        "trend_direction": trend_result["trend_direction"],
+        "trend_percentage": trend_result["trend_percentage"]
     }
 
-def compare_professors(professor_names: List[str], df: pd.DataFrame = None) -> Dict:
+
+def compare_professors(professor_names: List[str], df):
     """
-    เปรียบเทียบข้อมูลหลายอาจารย์
+    Compare multiple professors
 
     Args:
-        professor_names: list of professor names
-        df: DataFrame (optional)
+        professor_names: List of professor names to compare
+        df: Full dataset DataFrame
 
     Returns:
-        Dictionary with comparison data
+        Dictionary containing comparison results
     """
-    if df is None:
-        df = load_data()
+    results = {
+        "total_professors": 0,
+        "professors": [],
+        "comparison": {}
+    }
 
-    comparison_data = []
+    found_professors = []
 
     for name in professor_names:
-        pdf = df[df["professor_name"] == name]
+        pdf = df[df['professor_name'] == name]
 
         if len(pdf) == 0:
             continue
 
-        avg_rating = round(pdf["quality"].mean(), 2)
-        avg_difficulty = round(pdf["difficulty"].mean(), 2)
+        # Calculate statistics
+        avg_rating = round(pdf['quality'].mean(), 2)
+        avg_difficulty = round(pdf['difficulty'].mean(), 2)
         num_ratings = len(pdf)
-        rating_std = round(pdf["quality"].std(), 2)
 
-        # Get sentiment distribution (simplified)
-        positive_count = len(pdf[pdf["quality"] >= 4.0])
-        negative_count = len(pdf[pdf["quality"] < 3.0])
+        # Calculate sentiment percentages
+        sentiments = []
+        for c in pdf['comments'].sample(min(50, len(pdf))):
+            from analytics import analyze_text
+            s, _ = analyze_text(c)
+            sentiments.append(s)
 
-        comparison_data.append({
+        sentiment_counts = pd.Series(sentiments).value_counts()
+        positive_pct = round((sentiment_counts.get('positive', 0) / len(sentiments)) * 100, 1)
+        negative_pct = round((sentiment_counts.get('negative', 0) / len(sentiments)) * 100, 1)
+
+        # Rating std (consistency measure)
+        rating_std = round(pdf['quality'].std(), 2)
+
+        prof_data = {
             "name": name,
             "avg_rating": avg_rating,
             "avg_difficulty": avg_difficulty,
             "num_ratings": num_ratings,
-            "rating_std": rating_std,
-            "positive_percentage": round(positive_count / num_ratings * 100, 1),
-            "negative_percentage": round(negative_count / num_ratings * 100, 1)
-        })
+            "positive_percentage": positive_pct,
+            "negative_percentage": negative_pct,
+            "rating_std": rating_std
+        }
 
-    # Sort by average rating
-    comparison_data.sort(key=lambda x: x["avg_rating"], reverse=True)
+        found_professors.append(prof_data)
 
-    return {
-        "professors": comparison_data,
-        "total_professors": len(comparison_data)
-    }
+    results["total_professors"] = len(found_professors)
+    results["professors"] = found_professors
 
-def get_top_professors(by: str = "rating", n: int = 10,
-                       min_ratings: int = 5, df: pd.DataFrame = None) -> Dict:
+    # Add comparison rankings
+    if len(found_professors) > 0:
+        # Sort by different criteria
+        sorted_by_rating = sorted(found_professors, key=lambda x: x['avg_rating'], reverse=True)
+        sorted_by_difficulty = sorted(found_professors, key=lambda x: x['avg_difficulty'], reverse=True)
+        sorted_by_easiest = sorted(found_professors, key=lambda x: x['avg_difficulty'])
+        sorted_by_consistent = sorted(found_professors, key=lambda x: x['rating_std'])
+
+        results["comparison"] = {
+            "highest_rated": sorted_by_rating[0]['name'],
+            "lowest_rated": sorted_by_rating[-1]['name'],
+            "hardest": sorted_by_difficulty[0]['name'],
+            "easiest": sorted_by_easiest[0]['name'],
+            "most_consistent": sorted_by_consistent[0]['name']
+        }
+
+    return results
+
+
+def get_top_professors(by: str = "rating", n: int = 10, min_ratings: int = 5, df=None):
     """
-    ดู top N อาจารย์ตาม criteria ที่เลือก
+    Get top N professors by various criteria
 
     Args:
-        by: "rating", "difficulty", "easiest", "hardest", "most_reviews"
-        n: number of top professors to return
-        min_ratings: minimum number of ratings required
-        df: DataFrame (optional)
+        by: Sorting criteria
+        n: Number of professors to return
+        min_ratings: Minimum number of ratings required
+        df: Dataset DataFrame
 
     Returns:
-        Dictionary with top professors
+        List of top professors
     """
     if df is None:
-        df = load_data()
+        return {"error": "Dataset not provided"}
 
-    # Group by professor
-    prof_stats = df.groupby("professor_name").agg({
-        "quality": ["mean", "std", "count"],
-        "difficulty": ["mean", "std"]
-    }).round(2)
+    # Group by professor and calculate statistics
+    prof_stats = df.groupby('professor_name').agg({
+        'quality': ['mean', 'count', 'std'],
+        'difficulty': 'mean'
+    }).reset_index()
 
-    prof_stats.columns = ["avg_rating", "rating_std", "num_ratings",
-                         "avg_difficulty", "difficulty_std"]
+    prof_stats.columns = ['name', 'avg_rating', 'num_ratings', 'rating_std', 'avg_difficulty']
 
     # Filter by minimum ratings
-    prof_stats = prof_stats[prof_stats["num_ratings"] >= min_ratings]
+    prof_stats = prof_stats[prof_stats['num_ratings'] >= min_ratings]
 
+    # Sort by criteria
     if by == "rating":
-        top_profs = prof_stats.nlargest(n, "avg_rating")
+        sorted_profs = prof_stats.sort_values('avg_rating', ascending=False)
     elif by == "difficulty":
-        top_profs = prof_stats.nlargest(n, "avg_difficulty")
+        sorted_profs = prof_stats.sort_values('avg_difficulty', ascending=False)
     elif by == "easiest":
-        top_profs = prof_stats.nsmallest(n, "avg_difficulty")
+        sorted_profs = prof_stats.sort_values('avg_difficulty', ascending=True)
+    elif by == "hardest":
+        sorted_profs = prof_stats.sort_values('avg_difficulty', ascending=False)
     elif by == "most_reviews":
-        top_profs = prof_stats.nlargest(n, "num_ratings")
+        sorted_profs = prof_stats.sort_values('num_ratings', ascending=False)
     elif by == "most_consistent":
-        # Least rating standard deviation (with at least 5 ratings)
-        prof_stats_filtered = prof_stats[prof_stats["num_ratings"] >= 5]
-        top_profs = prof_stats_filtered.nsmallest(n, "rating_std")
+        sorted_profs = prof_stats.sort_values('rating_std', ascending=True)
     else:
-        top_profs = prof_stats.nlargest(n, "avg_rating")
+        sorted_profs = prof_stats.sort_values('avg_rating', ascending=False)
 
-    return {
-        "criteria": by,
-        "top_professors": [
-            {
-                "name": idx,
-                "avg_rating": row["avg_rating"],
-                "avg_difficulty": row["avg_difficulty"],
-                "num_ratings": int(row["num_ratings"])
-            }
-            for idx, row in top_profs.iterrows()
-        ]
-    }
+    # Take top N
+    top_profs = sorted_profs.head(n)
+
+    # Convert to list of dictionaries
+    result = []
+    for _, row in top_profs.iterrows():
+        result.append({
+            "name": row['name'],
+            "avg_rating": round(row['avg_rating'], 2),
+            "avg_difficulty": round(row['avg_difficulty'], 2),
+            "num_ratings": int(row['num_ratings']),
+            "rating_std": round(row['rating_std'], 2)
+        })
+
+    return result
