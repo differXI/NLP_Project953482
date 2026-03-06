@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import TrendChart from "./TrendChart";
 
 const COLORS = {
@@ -72,7 +72,11 @@ export default function Insights({ data, trendData, predictionData }) {
                   return null;
                 }}
               />
-              <Bar dataKey="value" fill={sentData.map(entry => COLORS[entry.name] || "#6b7280")} radius={[8, 8, 0, 0]} />
+              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                {sentData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[entry.name] || "#6b7280"} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
           <div style={{ marginTop: 12, fontSize: 12, color: '#6b7280' }}>
@@ -113,7 +117,11 @@ export default function Insights({ data, trendData, predictionData }) {
                   return null;
                 }}
               />
-              <Bar dataKey="value" fill={catData.map(entry => CATEGORY_COLORS[entry.originalKey] || "#6b7280")} radius={[8, 8, 0, 0]} />
+              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                {catData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.originalKey] || "#6b7280"} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
           <div style={{ marginTop: 12, fontSize: 12, color: '#6b7280' }}>
