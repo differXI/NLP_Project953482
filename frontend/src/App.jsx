@@ -4,6 +4,7 @@ import SearchBar from "./components/SearchBar";
 import ProfessorList from "./components/ProfessorList";
 import Insights from "./components/Insights";
 import ComparisonDashboard from "./components/ComparisonDashboard";
+import RankingDashboard from "./components/RankingDashboard";
 
 function App() {
   const [profs, setProfs] = useState([]);
@@ -12,7 +13,7 @@ function App() {
   const [trendData, setTrendData] = useState(null);
   const [predictionData, setPredictionData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState("individual"); // "individual" or "comparison"
+  const [view, setView] = useState("ranking"); // "individual", "comparison", or "ranking"
 
   useEffect(() => {
     getProfessors().then(r => setProfs(r.data));
@@ -85,6 +86,21 @@ function App() {
                   padding: '10px 20px',
                   border: 'none',
                   borderRadius: '8px',
+                  background: view === 'ranking' ? 'white' : 'transparent',
+                  color: view === 'ranking' ? '#3b82f6' : '#6b7280',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setView("ranking")}
+              >
+                🏆 Overall Rankings
+              </button>
+              <button
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '8px',
                   background: view === 'individual' ? 'white' : 'transparent',
                   color: view === 'individual' ? '#3b82f6' : '#6b7280',
                   cursor: 'pointer',
@@ -141,6 +157,10 @@ function App() {
             {/* Comparison View */}
             {view === "comparison" && (
               <ComparisonDashboard availableProfessors={profs} />
+            )}
+            {/*Ranking View*/}
+            {view === "ranking" && (
+              <RankingDashboard />
             )}
           </div>
         </div>
