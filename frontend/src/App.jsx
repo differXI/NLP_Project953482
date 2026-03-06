@@ -46,7 +46,12 @@ function App() {
   };
 
   const search = (q) => {
-    searchProf(q).then(r => setProfs(r.data));
+    if (q.length >= 3) {
+      searchProf(q).then(r => setProfs(r.data));
+    } 
+    else if (q.length === 0) {
+      getProfessors().then(r => setProfs(r.data));
+    }
   };
 
   return (
