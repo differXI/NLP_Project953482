@@ -1,343 +1,290 @@
 """
 Multi-Label Category Classification Training Script
-
-Trains a classifier to categorize professor comments into 5 categories:
-1. Teaching Clarity
-2. Speaking Pace
-3. Course Structure
-4. Communication
-5. Professional Behavior
-
-Uses keyword-based labeling to create training data.
+- Uses Regex word-boundary matching to label training data.
+- Builds its OWN TF-IDF Vectorizer (No more borrowing from Sentiment).
+- Fixes Data Leakage by splitting before Vectorizing.
+- Handles stopwords correctly (keeps negation words).
 """
 
+import os
+import re
+import sys
+import nltk
+import joblib
 import pandas as pd
-import numpy as np
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import classification_report, hamming_loss
-import joblib
-import os
 
-# Category keywords dictionary for labeling
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# ==========================================
+# ⚙️ SETTINGS
+# ==========================================
+CONFIG = {
+    "data_path": os.path.join(BASE_DIR, "data", "RateMyProfessor_Sample.csv"),
+    "model_dir": os.path.join(BASE_DIR, "models"),
+    "test_size": 0.2,
+    "max_features": 4000, # จำนวนคำศัพท์สูงสุดสำหรับหมวดหมู่
+    "random_seed": 42
+}
+
+# พจนานุกรมคำศัพท์สำหรับแยกหมวดหมู่
 CATEGORY_KEYWORDS = {
     'teaching_clarity': {
         'positive': [
-            'clear', 'understandable', 'well explained', 'easy to follow',
-            'explains well', 'makes sense', 'thorough explanation',
-            'great explanation', 'very clear', 'easy to understand',
-            'explains concepts', 'good explanations', 'understand',
-            'clarity', 'articulate', 'well organized lectures'
+            'clear', 'clearly', 'understand', 'well explained', 'easy to follow', 
+            'explain well', 'make sense', 'thorough', 'great explanation', 
+            'clarity', 'articulate', 'engaging', 'interesting', 'amazing lecture', 
+            'good professor', 'great professor', 'excellent teacher', 'good lecture',
+            'learn', 'teach', 'brilliant', 'smart', 'knowledgeable', 'material'
         ],
         'negative': [
-            'confusing', 'unclear', 'hard to follow', 'doesnt explain',
-            'difficult to understand', 'unclear explanation', 'confusing lectures',
-            'rambles', 'unclear teaching', 'hard to grasp',
-            'lacks clarity', 'unclear instructions', 'confusing'
+            'confusing', 'unclear', 'hard to follow', 'doesnt explain', 'didnt explain',
+            'difficult to understand', 'ramble', 'hard to grasp', 'lack clarity', 
+            'boring', 'dry', 'read off slide', 'read from powerpoint', 'confused', 
+            'terrible teacher', 'worst professor', 'heavy accent', 'cant understand'
         ]
     },
     'speaking_pace': {
         'positive': [
-            'clear voice', 'good pace', 'appropriate pace', 'easy to hear',
-            'speaks clearly', 'good speaker', 'pleasant voice', 'well spoken',
-            'articulate', 'clear speech', 'right pace', 'modulates voice'
+            'clear voice', 'good pace', 'appropriate pace', 'easy to hear', 
+            'speak clearly', 'good speaker', 'pleasant voice', 'well spoken'
         ],
         'negative': [
-            'too fast', 'rushes', 'rushed', 'too slow', 'mumbles',
-            'hard to hear', 'speaks too fast', 'rushed through',
-            'speaks fast', 'slow speaker', 'monotone', 'hard to understand speech',
-            'mumbling', 'talks too fast', 'rushed through material'
+            'too fast', 'rush', 'too slow', 'mumble', 'hard to hear', 
+            'speak too fast', 'speak fast', 'monotone', 'quiet', 'soft spoken', 'cant hear'
         ]
     },
     'course_structure': {
         'positive': [
-            'organized', 'structured', 'well planned', 'clear syllabus',
-            'good organization', 'well organized', 'structured course',
-            'well laid out', 'good structure', 'organized class',
-            'clear structure', 'well designed', 'logical flow'
+            'organized', 'structure', 'well planned', 'clear syllabus', 
+            'logical flow', 'easy a', 'fair grading', 'clear grading criteria', 
+            'extra credit', 'easy exam', 'fair test', 'easy class', 'straightforward', 'pass'
         ],
         'negative': [
-            'disorganized', 'unstructured', 'messy', 'no structure',
-            'poorly organized', 'lacks structure', 'disorganized class',
-            'unorganized course', 'all over the place', 'no clear structure',
-            'chaotic', 'disorganized lectures', 'poor organization'
+            'disorganized', 'unstructured', 'messy', 'no structure', 'all over the place', 
+            'chaotic', 'tough grader', 'test heavy', 'pop quiz', 'hard exam', 
+            'harsh grader', 'too much work', 'heavy workload', 'difficult exam', 
+            'hard test', 'unfair grading', 'fail'
+        ],
+        # เพิ่มหมวดกลางๆ เพราะพูดถึงเรื่องโครงสร้างวิชาแน่นอน (มาจาก Top 50 คำที่ตกหล่น)
+        'neutral': [
+            'test', 'exam', 'homework', 'assignment', 'paper', 'quiz', 'project', 
+            'book', 'textbook', 'study', 'grade', 'note', 'read'
         ]
     },
     'communication': {
         'positive': [
-            'helpful', 'responsive', 'answers questions', 'accessible',
-            'available', 'great communication', 'quick to respond',
-            'always available', 'open door', 'approachable', 'willing to help',
-            'responsive to questions', 'helpful outside class'
+            'helpful', 'responsive', 'answer question', 'accessible', 'available', 
+            'quick to respond', 'open door', 'approachable', 'willing to help', 
+            'office hour', 'reply', 'email', 'accessible outside class', 'help', 'question'
         ],
         'negative': [
-            'unresponsive', 'doesnt answer', 'ignores questions',
-            'hard to reach', 'unavailable', 'poor communication',
-            'never available', 'ignores students', 'doesnt respond',
-            'unresponsive to emails', 'inaccessible', 'not helpful'
+            'unresponsive', 'doesnt answer', 'ignore question', 'hard to reach', 
+            'unavailable', 'poor communication', 'ignore student', 'doesnt respond', 
+            'inaccessible', 'not helpful', 'never reply', 'ignore email', 'no response'
         ]
     },
     'professional_behavior': {
         'positive': [
-            'professional', 'respectful', 'fair', 'caring', 'understanding',
-            'kind', 'patient', 'supportive', 'reasonable', 'ethical',
-            'fair grading', 'treats students with respect', 'approachable'
+            'professional', 'respectful', 'fair', 'caring', 'care',
+            'kind', 'patient', 'supportive', 'reasonable', 'ethical', 'sweet', 'nice', 
+            'funny', 'hilarious', 'inspirational', 'passionate', 'chill', 'accommodating',
+            'awesome', 'fun', 'love', 'amazing', 'guy'
         ],
         'negative': [
-            'rude', 'unprofessional', 'unfair', 'disrespectful',
-            'biased', 'unfair grading', 'arrogant', 'condescending',
-            'unfair to students', 'rude to students', 'unprofessional behavior',
-            'belittles students', 'inappropriate'
+            'rude', 'unprofessional', 'unfair', 'disrespectful', 'biased', 'arrogant', 
+            'condescending', 'belittle', 'inappropriate', 'mean', 'strict', 
+            'unreasonable', 'awful', 'terrible person', 'doesnt care', 'didnt care', 'bad', 'terrible'
         ]
     }
 }
 
+# ==========================================
+# 1. TEXT PREPARATION
+# ==========================================
+def setup_nltk():
+    try:
+        nltk.data.find('corpora/stopwords')
+        nltk.data.find('corpora/wordnet')
+    except LookupError:
+        print("Downloading NLTK data...")
+        nltk.download('stopwords', quiet=True)
+        nltk.download('wordnet', quiet=True)
+
+def clean_text(texts):
+    """ทำความสะอาดข้อความ โดยเก็บคำปฏิเสธ (not, no) เอาไว้"""
+    print("Cleaning text... (This might take a moment)")
+    stop_words = set(stopwords.words('english'))
+    negation_words = {"not", "no", "nor", "doesn't", "isn't", "didn't", "wasn't", "wouldn't", "can't", "cannot", "couldn't", "won't"}
+    stop_words = stop_words - negation_words
+    
+    lemmatizer = WordNetLemmatizer()
+    processed = []
+
+    for text in texts:
+        text = text.replace('-', ' ')
+        text = re.sub(r'[^a-zA-Z\s]', '', str(text).lower())
+        words = [
+            lemmatizer.lemmatize(word) for word in text.split() 
+            if word not in stop_words and len(word) > 2
+        ]
+        processed.append(' '.join(words))
+
+    return processed
 
 def create_category_labels(comments):
-    """
-    Create labels for categories using keyword matching
-
-    Args:
-        comments: List of comment strings
-
-    Returns:
-        List of sets containing category labels for each comment
-    """
-    print("Creating category labels using keyword matching...")
-
+    """สร้าง Label ด้วย Regex โดยแปลงประโยคเป็น 'รากศัพท์' ก่อนทำการจับคู่"""
+    print("Creating category labels using Lemmatization & Regex...")
+    
+    lemmatizer = WordNetLemmatizer()
     labels = []
     category_counts = {cat: 0 for cat in CATEGORY_KEYWORDS.keys()}
     no_match_count = 0
 
     for i, comment in enumerate(comments):
-        if i % 10000 == 0:
-            print(f"  Processing {i}/{len(comments)}...")
+        # 1. ทำความสะอาดเบื้องต้น (ลบสัญลักษณ์)
+        text = str(comment).lower()
+        text = re.sub(r'[^a-zA-Z\s]', '', text) 
+        
+        # 2. แปลงคำในคอมเมนต์ให้เป็น "รากศัพท์ (Root)" ก่อนให้ Regex ตรวจ
+        lemmatized_words = [lemmatizer.lemmatize(word) for word in text.split()]
+        comment_lemmatized = ' '.join(lemmatized_words)
 
-        comment_lower = str(comment).lower()
         comment_categories = set()
 
-        # Check each category
-        for category, keywords in CATEGORY_KEYWORDS.items():
-            # Check if any keyword appears in comment
-            all_keywords = keywords['positive'] + keywords['negative']
-            if any(keyword in comment_lower for keyword in all_keywords):
-                comment_categories.add(category)
-                category_counts[category] += 1
+        # 3. ใช้ Regex ค้นหา (ค้นหาจาก comment_lemmatized แทน)
+        for category, subcats in CATEGORY_KEYWORDS.items():
+            # รวมคำศัพท์จากทั้ง positive, negative (และ neutral ถ้ามี)
+            all_keywords = []
+            for subcat, keywords in subcats.items():
+                all_keywords.extend(keywords)
+                
+            for keyword in all_keywords:
+                pattern = r'\b' + re.escape(keyword) + r'\b'
+                # ค้นหาในประโยคที่ถูกทำรากศัพท์แล้ว
+                if re.search(pattern, comment_lemmatized):
+                    comment_categories.add(category)
+                    category_counts[category] += 1
+                    break # เจอคำเดียวพอ เปลี่ยนไปเช็คหมวดอื่นต่อ
 
-        # If no category matched, this is okay (multi-label can have empty set)
-        if len(comment_categories) == 0:
+        if not comment_categories:
             no_match_count += 1
-
         labels.append(comment_categories)
 
-    print(f"\n  Category Distribution:")
+    print("\nCategory Distribution:")
     for cat, count in category_counts.items():
-        percentage = (count / len(comments)) * 100
-        print(f"    {cat}: {count} ({percentage:.1f}%)")
-    print(f"    No category matched: {no_match_count} ({(no_match_count/len(comments)*100):.1f}%)")
+        print(f"  - {cat}: {count} ({(count / len(comments)) * 100:.1f}%)")
+    print(f"  - No category matched: {no_match_count} ({(no_match_count/len(comments)*100):.1f}%)")
 
     return labels
 
+# ==========================================
+# 2. TRAINING PIPELINE
+# ==========================================
+def train_category_model():
+    setup_nltk()
+    os.makedirs(CONFIG["model_dir"], exist_ok=True)
 
-def load_vectorizer(vectorizer_path="models/vectorizer.pkl"):
-    """Load existing vectorizer or create new one"""
-    if os.path.exists(vectorizer_path):
-        print(f"Loading existing vectorizer from {vectorizer_path}...")
-        return joblib.load(vectorizer_path)
-    else:
-        print("Vectorizer not found. Please train sentiment model first!")
-        raise FileNotFoundError(f"{vectorizer_path} not found. Run train_sentiment.py first.")
-
-
-def preprocess_with_vectorizer(comments, vectorizer):
-    """Preprocess comments using existing vectorizer"""
-    # The vectorizer already handles preprocessing
-    # Just need to clean the text a bit
-    import re
-
-    processed = []
-    for comment in comments:
-        # Basic cleaning
-        text = str(comment).lower()
-        text = re.sub(r'[^a-zA-Z\s]', '', text)
-        text = re.sub(r'\s+', ' ', text).strip()
-        processed.append(text)
-
-    # Transform using vectorizer
-    return vectorizer.transform(processed)
-
-
-def train_category_model(data_path="data/RateMyProfessor_Sample.csv",
-                          model_dir="models",
-                          test_size=0.2):
-    """
-    Train multi-label category classification model
-
-    Args:
-        data_path: Path to the CSV dataset
-        model_dir: Directory to save/load models
-        test_size: Proportion of data for testing
-
-    Returns:
-        Dictionary containing model performance metrics
-    """
-    print("\n" + "="*60)
-    print("MULTI-LABEL CATEGORY CLASSIFICATION MODEL TRAINING")
-    print("="*60)
-
-    # Create model directory if it doesn't exist
-    os.makedirs(model_dir, exist_ok=True)
-
-    # 1. Load data
-    print(f"\nLoading data from {data_path}...")
-    df = pd.read_csv(data_path)
-
+    # 1. โหลดข้อมูล
+    print(f"\nLoading data from {CONFIG['data_path']}...")
+    df = pd.read_csv(CONFIG["data_path"])
+    
     if 'comments' not in df.columns:
         raise ValueError("Column 'comments' not found in dataset")
+    
+    comments = df['comments'].dropna().tolist()
+    print(f"Loaded {len(comments)} comments")
 
-    df = df[['comments']].dropna()
-    comments = df['comments'].tolist()
-
-    print(f"  Loaded {len(comments)} comments")
-
-    # 2. Create labels
+    # 2. สร้าง Labels ด้วย Regex
     y_raw = create_category_labels(comments)
 
-    # Filter out comments with no labels (optional - can keep them too)
+    # 3. คัดเอาเฉพาะคอมเมนต์ที่มีอย่างน้อย 1 หมวดหมู่ไปสอน ML
     valid_indices = [i for i, labels in enumerate(y_raw) if len(labels) > 0]
-
-    if len(valid_indices) < len(comments) * 0.5:
-        print(f"\n  WARNING: Only {len(valid_indices)}/{len(comments)} comments have labels")
-        print("  This might result in poor model performance")
-
-    # Use only comments with labels for training
     comments_filtered = [comments[i] for i in valid_indices]
     y_raw_filtered = [y_raw[i] for i in valid_indices]
 
-    print(f"\n  Using {len(comments_filtered)} labeled comments for training")
+    print(f"\nUsing {len(comments_filtered)} labeled comments for training ML model")
 
-    # 3. Load or create vectorizer
-    vectorizer = load_vectorizer(os.path.join(model_dir, 'vectorizer.pkl'))
-
-    # 4. Preprocess and vectorize
-    print("\nVectorizing comments...")
-    X = preprocess_with_vectorizer(comments_filtered, vectorizer)
-    print(f"  Feature matrix shape: {X.shape}")
-
-    # 5. Binarize labels
-    print("\nBinarizing labels...")
+    # 4. Binarize labels
+    print("Binarizing labels...")
     mlb = MultiLabelBinarizer()
     y = mlb.fit_transform(y_raw_filtered)
 
-    print(f"  Classes: {mlb.classes_}")
-    print(f"  Label matrix shape: {y.shape}")
-
-    # 6. Split data
-    print("\nSplitting data...")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=42
+    # 5. แบ่งข้อมูล (Train / Test Split ทันที ป้องกัน Data Leakage!)
+    print("\nSplitting data before Vectorization...")
+    X_train_text, X_test_text, y_train, y_test = train_test_split(
+        comments_filtered, y, 
+        test_size=CONFIG["test_size"], 
+        random_state=CONFIG["random_seed"]
     )
-    print(f"  Training set: {len(X_train)} samples")
-    print(f"  Test set: {len(X_test)} samples")
+    
+    # 6. ทำความสะอาดข้อความ (Clean text) แยก Train กับ Test
+    X_train_clean = clean_text(X_train_text)
+    X_test_clean = clean_text(X_test_text)
 
-    # 7. Train model
+    # 7. สร้าง Vectorizer ของตัวเอง (Fit เฉพาะ Train Set)
+    print("\nVectorizing text with custom TF-IDF...")
+    vectorizer = TfidfVectorizer(
+        max_features=CONFIG["max_features"],
+        ngram_range=(1, 2),
+        min_df=2,
+        max_df=0.8
+    )
+    X_train = vectorizer.fit_transform(X_train_clean)
+    X_test = vectorizer.transform(X_test_clean)
+
+    print(f"  Training set: {X_train.shape[0]} samples")
+    print(f"  Test set: {X_test.shape[0]} samples")
+
+    # 8. เทรนโมเดล
     print("\nTraining OneVsRestClassifier with LogisticRegression...")
     model = OneVsRestClassifier(
-        LogisticRegression(max_iter=1000, random_state=42),
-        n_jobs=-1  # Use all CPU cores
+        LogisticRegression(max_iter=1000, random_state=CONFIG["random_seed"], class_weight='balanced'),
+        n_jobs=-1 
     )
     model.fit(X_train, y_train)
-    print("  Training complete!")
 
-    # 8. Evaluate
-    print("\n" + "-"*60)
-    print("MODEL EVALUATION")
-    print("-"*60)
-
-    # Predictions
+    # 9. ประเมินผล
+    print("\n" + "-"*40 + "\nEVALUATION\n" + "-"*40)
     y_train_pred = model.predict(X_train)
     y_test_pred = model.predict(X_test)
 
-    # Calculate accuracy
-    train_accuracy = (y_train_pred == y_train).mean()
-    test_accuracy = (y_test_pred == y_test).mean()
-
-    print(f"\nTraining Exact Match Accuracy: {train_accuracy:.4f}")
-    print(f"Test Exact Match Accuracy: {test_accuracy:.4f}")
-
-    # Hamming loss (fraction of labels that are incorrectly predicted)
-    train_hamming = hamming_loss(y_train, y_train_pred)
+    # 🚀 โชว์ Train Accuracy ให้เห็นรอยหยักสมองของโมเดล
+    train_acc = (y_train_pred == y_train).mean()
+    test_acc = (y_test_pred == y_test).mean()
     test_hamming = hamming_loss(y_test, y_test_pred)
 
-    print(f"\nTraining Hamming Loss: {train_hamming:.4f}")
-    print(f"Test Hamming Loss: {test_hamming:.4f}")
-
-    # Classification report for each category
-    print("\nPer-Category Classification Report:")
+    print(f"Training Exact Match Accuracy : {train_acc:.4f}  <-- เช็ค Overfitting ตรงนี้")
+    print(f"Test Exact Match Accuracy     : {test_acc:.4f}")
+    print(f"Test Hamming Loss             : {test_hamming:.4f}\n")
+    print("Classification Report:")
     print(classification_report(y_test, y_test_pred, target_names=mlb.classes_))
 
-    # 9. Save models
-    print("\n" + "-"*60)
-    print("SAVING MODELS")
-    print("-"*60)
+    # 10. เซฟโมเดล
+    # ⚠️ สำคัญ: ต้องเซฟ Vectorizer แยกตั้งชื่อว่า category_vectorizer.pkl
+    vec_path = os.path.join(CONFIG["model_dir"], 'category_vectorizer.pkl')
+    mod_path = os.path.join(CONFIG["model_dir"], 'category_model.pkl')
+    mlb_path = os.path.join(CONFIG["model_dir"], 'mlb.pkl')
 
-    category_model_path = os.path.join(model_dir, 'category_model.pkl')
-    mlb_path = os.path.join(model_dir, 'mlb.pkl')
-
-    joblib.dump(model, category_model_path)
-    print(f"  ✓ Model saved to {category_model_path}")
-
+    joblib.dump(vectorizer, vec_path)
+    joblib.dump(model, mod_path)
     joblib.dump(mlb, mlb_path)
-    print(f"  ✓ MultiLabelBinarizer saved to {mlb_path}")
-
-    # 10. Display statistics
-    print("\n" + "-"*60)
-    print("LABEL STATISTICS")
-    print("-"*60)
-
-    for i, category in enumerate(mlb.classes_):
-        train_count = y_train[:, i].sum()
-        test_count = y_test[:, i].sum()
-        print(f"\n{category}:")
-        print(f"  Training samples: {int(train_count)}")
-        print(f"  Test samples: {int(test_count)}")
-
-    # Return metrics
-    metrics = {
-        'train_accuracy': train_accuracy,
-        'test_accuracy': test_accuracy,
-        'train_hamming_loss': train_hamming,
-        'test_hamming_loss': test_hamming,
-        'classification_report': classification_report(y_test, y_test_pred, target_names=mlb.classes_, output_dict=True),
-        'classes': mlb.classes_.tolist(),
-        'num_samples': len(comments_filtered)
-    }
-
-    return metrics
-
+    print(f"\n✅ Models saved successfully in '{CONFIG['model_dir']}/' directory.")
 
 if __name__ == "__main__":
-    import sys
-
-    data_path = sys.argv[1] if len(sys.argv) > 1 else "data/RateMyProfessor_Sample.csv"
+    if len(sys.argv) > 1:
+        CONFIG["data_path"] = sys.argv[1]
 
     try:
-        metrics = train_category_model(data_path=data_path)
-
-        print("\n" + "="*60)
-        print("TRAINING COMPLETE!")
-        print("="*60)
-        print(f"Test Accuracy: {metrics['test_accuracy']:.4f}")
-        print(f"Test Hamming Loss: {metrics['test_hamming_loss']:.4f}")
-        print(f"Categories: {metrics['classes']}")
-        print(f"Samples Used: {metrics['num_samples']}")
-        print("="*60)
-
+        train_category_model()
     except Exception as e:
-        print(f"\nERROR: {e}")
+        print(f"\n❌ ERROR: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

@@ -9,16 +9,30 @@ import joblib
 import pandas as pd
 import os
 import sys
+import re
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from analytics import analyze_text
 
+def setup_nltk():
+    try:
+        nltk.data.find('corpora/stopwords')
+        nltk.data.find('corpora/wordnet')
+    except LookupError:
+        print("Downloading NLTK data...")
+        nltk.download('stopwords', quiet=True)
+        nltk.download('wordnet', quiet=True)
 
 def load_models():
     """Load all trained models"""
     print("Loading trained models...")
 
-    # Check if model files exist
+    # อัปเดตให้โหลด Vectorizer 2 ตัว (แยกกัน)
     required_files = {
-        'vectorizer.pkl': 'TF-IDF Vectorizer',
+        'vectorizer.pkl': 'Sentiment TF-IDF Vectorizer',
         'sentiment_model.pkl': 'Sentiment Classifier',
+        'category_vectorizer.pkl': 'Category TF-IDF Vectorizer',
         'category_model.pkl': 'Category Classifier',
         'mlb.pkl': 'MultiLabelBinarizer'
     }
@@ -40,87 +54,84 @@ def load_models():
         sys.exit(1)
 
     # Load models
-    vectorizer = joblib.load(os.path.join(model_dir, 'vectorizer.pkl'))
-    sentiment_model = joblib.load(os.path.join(model_dir, 'sentiment_model.pkl'))
-    category_model = joblib.load(os.path.join(model_dir, 'category_model.pkl'))
+    sent_vec = joblib.load(os.path.join(model_dir, 'vectorizer.pkl'))
+    sent_model = joblib.load(os.path.join(model_dir, 'sentiment_model.pkl'))
+    cat_vec = joblib.load(os.path.join(model_dir, 'category_vectorizer.pkl'))
+    cat_model = joblib.load(os.path.join(model_dir, 'category_model.pkl'))
     mlb = joblib.load(os.path.join(model_dir, 'mlb.pkl'))
 
     print("\n✓ All models loaded successfully\n")
 
-    return vectorizer, sentiment_model, category_model, mlb
+    return sent_vec, sent_model, cat_vec, cat_model, mlb
 
 
-def preprocess_text(text_list, vectorizer):
-    """Preprocess text using the vectorizer"""
-    import re
-
+def preprocess_text(text_list):
+    """ทำความสะอาดข้อความด้วย Lemmatization ให้ตรงกับตอนเทรนเป๊ะๆ"""
+    setup_nltk()
+    stop_words = set(stopwords.words('english'))
+    negation_words = {"not", "no", "nor", "doesn't", "isn't", "didn't", "wasn't", "wouldn't", "can't", "cannot", "couldn't", "won't"}
+    stop_words = stop_words - negation_words
+    
+    lemmatizer = WordNetLemmatizer()
     processed = []
+
     for text in text_list:
-        # Basic cleaning
         text = str(text).lower()
+        text = text.replace('-', ' ')
         text = re.sub(r'[^a-zA-Z\s]', '', text)
-        text = re.sub(r'\s+', ' ', text).strip()
-        processed.append(text)
+        words = [
+            lemmatizer.lemmatize(word) for word in text.split() 
+            if word not in stop_words and len(word) > 2
+        ]
+        processed.append(' '.join(words))
 
-    # Transform using vectorizer
-    return vectorizer.transform(processed)
+    return processed
 
 
-def test_predictions(test_comments, vectorizer, sentiment_model, category_model, mlb):
-    """Test models with sample comments"""
+def test_predictions(test_comments):
     print("Processing test comments...")
-
-    # Preprocess
-    processed = preprocess_text(test_comments, vectorizer)
-    X = vectorizer.transform(processed)
-
-    # Predict sentiment
-    sentiments = sentiment_model.predict(X)
-    sentiment_probs = sentiment_model.predict_proba(X)
-
-    # Predict categories
-    categories = mlb.inverse_transform(category_model.predict(X))
-
-    # Display results
     print("\n" + "="*80)
     print(" " * 25 + "PREDICTION RESULTS")
     print("="*80)
 
-    for i, (comment, sentiment, cats) in enumerate(zip(test_comments, sentiments, categories), 1):
-        # Truncate long comments for display
+    sentiments_list = []
+    all_cats = [] # 🌟 ประกาศตัวแปรเก็บ Category รวมไว้ตรงนี้เลย
+    
+    for i, comment in enumerate(test_comments, 1):
         display_comment = comment[:100] + '...' if len(comment) > 100 else comment
+        
+        # 🌟 เรียกใช้ฟังก์ชันเดียวจบ!
+        sentiment, cats, confidence = analyze_text(comment)
+        
+        # เก็บค่าสะสมไว้ทำ Summary ตอนท้าย
+        sentiments_list.append(sentiment)
+        all_cats.extend(cats) # 🌟 เอา category ของคอมเมนต์นี้ไปต่อท้าย list รวม
 
         print(f"\n[Test {i}]")
         print(f"Comment: {display_comment}")
         print(f"{'─'*80}")
-
-        # Sentiment with confidence
         print(f"Sentiment: {sentiment.upper()}")
-        probs = sentiment_probs[i]
-        print(f"Confidence: Negative={probs[0]:.2%}, Neutral={probs[1]:.2%}, Positive={probs[2]:.2%}")
+        
+        # ดึงเปอร์เซ็นต์มาโชว์
+        conf_details = f"Negative={confidence['negative']:.2%}, Positive={confidence['positive']:.2%}"
+        print(f"Confidence: {conf_details}")
 
-        # Categories
         if len(cats) > 0:
             print(f"Categories: {', '.join(cats)}")
         else:
             print(f"Categories: None detected")
 
-    # Summary statistics
-    sentiment_counts = pd.Series(sentiments).value_counts()
     print("\n" + "="*80)
     print("SUMMARY STATISTICS")
     print("="*80)
     print(f"Total comments tested: {len(test_comments)}")
+    
     print(f"\nSentiment Distribution:")
-    for sent in ['negative', 'neutral', 'positive']:
-        count = sentiment_counts.get(sent, 0)
-        print(f"  {sent.capitalize()}: {count}")
+    sentiment_counts = pd.Series(sentiments_list).value_counts()
+    for sent in sentiment_counts.index:
+        print(f"  {sent.capitalize()}: {sentiment_counts[sent]}")
 
-    # Flatten all categories
-    all_cats = []
-    for cats in categories:
-        all_cats.extend(cats)
-
+    # 🌟 นับ Category จาก all_cats ที่เราเก็บสะสมมาได้เลย
     if all_cats:
         cat_counts = pd.Series(all_cats).value_counts()
         print(f"\nCategory Distribution:")
@@ -128,11 +139,10 @@ def test_predictions(test_comments, vectorizer, sentiment_model, category_model,
             print(f"  {cat}: {count}")
     else:
         print("\nNo categories detected in any comments.")
-
     print("="*80)
 
 
-def interactive_mode(vectorizer, sentiment_model, category_model, mlb):
+def interactive_mode(sent_vec, sent_model, cat_vec, cat_model, mlb):
     """Interactive mode for testing custom comments"""
     print("\n" + "="*80)
     print(" " * 30 + "INTERACTIVE MODE")
@@ -141,6 +151,7 @@ def interactive_mode(vectorizer, sentiment_model, category_model, mlb):
     print("Commands: 'quit' or 'exit' to quit, 'clear' to clear screen\n")
 
     comment_count = 0
+    sent_classes = sent_model.classes_
 
     while True:
         try:
@@ -149,30 +160,31 @@ def interactive_mode(vectorizer, sentiment_model, category_model, mlb):
             if comment.lower() in ['quit', 'exit', 'q']:
                 print("\nExiting interactive mode...")
                 break
-
             if comment.lower() == 'clear':
                 os.system('cls' if os.name == 'nt' else 'clear')
                 continue
-
             if not comment:
                 continue
 
             comment_count += 1
 
             # Process and predict
-            processed = preprocess_text([comment], vectorizer)
-            X = vectorizer.transform(processed)
+            processed = preprocess_text([comment])
+            X_sent = sent_vec.transform(processed)
+            X_cat = cat_vec.transform(processed)
 
-            sentiment = sentiment_model.predict(X)[0]
-            probs = sentiment_model.predict_proba(X)[0]
-            categories = mlb.inverse_transform(category_model.predict(X))[0]
+            sentiment = sent_model.predict(X_sent)[0]
+            probs = sent_model.predict_proba(X_sent)[0]
+            categories = mlb.inverse_transform(cat_model.predict(X_cat))[0]
 
             # Display result
             print(f"\n{'─'*40}")
             print(f"Comment #{comment_count}")
             print(f"{'─'*40}")
             print(f"Sentiment: {sentiment.upper()}")
-            print(f"Confidence: Negative={probs[0]:.2%}, Neutral={probs[1]:.2%}, Positive={probs[2]:.2%}")
+            
+            conf_details = ", ".join([f"{cls.capitalize()}={prob:.2%}" for cls, prob in zip(sent_classes, probs)])
+            print(f"Confidence: {conf_details}")
 
             if len(categories) > 0:
                 print(f"Categories: {', '.join(categories)}")
@@ -187,25 +199,19 @@ def interactive_mode(vectorizer, sentiment_model, category_model, mlb):
             continue
 
 
-def evaluate_on_dataset(data_path="data/RateMyProfessor_Sample.csv", sample_size=100):
+def evaluate_on_dataset(data_path="./RateMyProfessor_Sample data.csv", sample_size=100):
     """Evaluate models on a sample from the dataset"""
     print(f"\nEvaluating on sample from {data_path}...")
 
-    # Load data
     df = pd.read_csv(data_path)
     df = df[['comments']].dropna()
 
-    # Sample
     if len(df) > sample_size:
         df = df.sample(n=sample_size, random_state=42)
 
     comments = df['comments'].tolist()
-
-    # Load models
-    vectorizer, sentiment_model, category_model, mlb = load_models()
-
-    # Test
-    test_predictions(comments, vectorizer, sentiment_model, category_model, mlb)
+    sent_vec, sent_model, cat_vec, cat_model, mlb = load_models()
+    test_predictions(comments, sent_vec, sent_model, cat_vec, cat_model, mlb)
 
 
 # Sample test cases
@@ -221,7 +227,15 @@ TEST_COMMENTS = [
     "Rude, arrogant, and unprofessional. Makes students feel stupid for asking questions.",
     "Clear voice, appropriate pace, and well organized materials. Easy to learn from this instructor.",
     "The teaching is confusing and the professor is unresponsive to student questions.",
-    "Well-structured course with great communication. The instructor is always available to help."
+    "Well-structured course with great communication. The instructor is always available to help.",
+    "This class is pretty hard, but the professor is very supportive and provides helpful feedback on assignments.",
+    "The lectures are boring. The materials are pretty disorganized and it's surprisingly hard to follow the course. I don't recommend this professor.",
+    "She is an exelent talker and very clear in her explanations. But the grading is surprisingly harsh and the exam is pretty difficult. Her time management is quite bad, sometimes she starts the lecture very late and rushes through the materials at the end. Overall, I think she's a good professor but the course is quite challenging.",
+    "U know wat, I really loveeeeeee this professor! 1ofa, he looks SO GOOD. He has a very clear voice and a charming smile;) that makes u want to pay attention in class.",
+    "Ngl, this prof is lowkey a fever dream. Lectures r 10/10 borinng af & he talks sooooo fast u cant even take notes. But then he gives extra credit like its candy?? Sus but i guess i'll pass.",
+    "Ajan is so jai-dee mak mak! Even though the exam was f*ing hard, he still helps us a lot. Best prof ever na krub, 10/10 recommended eiei.",
+    "Oh, I just LOVE how the professor is SO CLEAR that I literally have no idea what's going on. Truly a masterpiece of confusion. 10/10 would recommend if u want to fail.",
+    "This class is absolute INSANITY! The workload is BRUTAL and the exams are freaking KILLER, but man, you learn so much. Prof is a total BEAST in the best way possible. Best experience ever."
 ]
 
 
@@ -239,14 +253,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.interactive:
-        # Interactive mode
-        vectorizer, sentiment_model, category_model, mlb = load_models()
-        interactive_mode(vectorizer, sentiment_model, category_model, mlb)
+        sent_vec, sent_model, cat_vec, cat_model, mlb = load_models()
+        interactive_mode(sent_vec, sent_model, cat_vec, cat_model, mlb)
     elif args.dataset:
-        # Dataset evaluation
         evaluate_on_dataset(sample_size=args.sample_size)
     else:
-        # Default: run with test cases
         print("="*80)
         print(" " * 20 + "NLP MODEL EVALUATION")
         print("="*80)
@@ -256,9 +267,7 @@ if __name__ == "__main__":
         print("  -d, --dataset       Evaluate on dataset sample")
         print("  -s, --sample-size N  Sample size for dataset evaluation\n")
 
-        # Load models and test
-        vectorizer, sentiment_model, category_model, mlb = load_models()
-        test_predictions(TEST_COMMENTS, vectorizer, sentiment_model, category_model, mlb)
+        test_predictions(TEST_COMMENTS)
 
         print("\n" + "="*80)
         print("To test your own comments, run:")

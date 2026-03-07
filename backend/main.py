@@ -17,7 +17,7 @@ app = FastAPI(title="Course & Instructor Evaluation Analytics API")
 # allow React
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,7 +62,7 @@ def professor_detail(name: str):
     sample_comments = pdf["comments"].sample(min(50, len(pdf))) if len(pdf) > 50 else pdf["comments"]
 
     for c in sample_comments:
-        s, cat = analyze_text(c)
+        s, cat, _ = analyze_text(c) 
         sentiments.append(s)
         categories.extend(cat)
 
