@@ -156,7 +156,7 @@ def get_top_professors_endpoint(
     min_ratings: int = 5
 ):
     """Get top N professors by various criteria"""
-    valid_criteria = ["rating", "difficulty", "easiest", "hardest", "most_reviews", "most_consistent"]
+    valid_criteria = ["rating", "difficulty", "easiest", "hardest", "most_reviews", "most_consistent","predicted"]
 
     if by not in valid_criteria:
         raise HTTPException(
@@ -168,6 +168,14 @@ def get_top_professors_endpoint(
         raise HTTPException(status_code=400, detail="n must be between 1 and 50")
 
     return get_top_professors(by, n, min_ratings, df)
+
+# ========= TOP PREDICTION VIEW =========
+# main.py
+
+@app.get("/professors/predicted-rankings")
+def predicted_rankings(n: int = 10, min_ratings: int = 5):
+    from trend_analysis import get_predicted_rankings
+    return get_predicted_rankings(n, min_ratings, df)
 
 # ========= HEALTH CHECK =========
 @app.get("/health")

@@ -24,6 +24,7 @@ export const compareProfessorsPost = (professorList) =>
 // ========= TOP PROFESSORS =========
 export const getTopProfessors = (by = "rating", n = 10, minRatings = 5) =>
   axios.get(`${API}/professors/top?by=${by}&n=${n}&min_ratings=${minRatings}`);
+export const getPredictedRankings = (n = 10) => axios.get(`${API}/professors/predicted-rankings?n=${n}`);
 
 // ========= HEALTH =========
 export const healthCheck = () => axios.get(`${API}/health`);

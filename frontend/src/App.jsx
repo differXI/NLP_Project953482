@@ -5,6 +5,7 @@ import ProfessorList from "./components/ProfessorList";
 import Insights from "./components/Insights";
 import ComparisonDashboard from "./components/ComparisonDashboard";
 import RankingDashboard from "./components/RankingDashboard";
+import PredictionDashboard from "./components/PredictionDashboard";
 
 function App() {
   const [profs, setProfs] = useState([]);
@@ -13,7 +14,7 @@ function App() {
   const [trendData, setTrendData] = useState(null);
   const [predictionData, setPredictionData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState("ranking"); // "individual", "comparison", or "ranking"
+  const [view, setView] = useState("prediction"); // "prediction","individual", "comparison", or "ranking"
 
   useEffect(() => {
     getProfessors().then(r => setProfs(r.data));
@@ -86,6 +87,21 @@ function App() {
               borderRadius: '12px',
               width: 'fit-content'
             }}>
+              <button
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: view === 'prediction' ? 'white' : 'transparent',
+                  color: view === 'prediction' ? '#3b82f6' : '#6b7280',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setView("prediction")}
+              >
+                ✨ Prediction Analytics
+              </button>
               <button
                 style={{
                   padding: '10px 20px',
@@ -167,6 +183,10 @@ function App() {
             {view === "ranking" && (
               <RankingDashboard />
             )}
+            {/* Prediction View */}
+            {view === "prediction" && (
+              <PredictionDashboard />
+             )}
           </div>
         </div>
       </div>

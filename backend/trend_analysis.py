@@ -267,3 +267,27 @@ def get_top_professors(by: str = "rating", n: int = 10, min_ratings: int = 5, df
         })
 
     return result
+
+def get_predicted_rankings(n: int = 10, min_ratings: int = 5, df=None):
+    if df is None: return []
+
+    # 1. กรองเฉพาะอาจารย์ที่มีรีวิวถึงเกณฑ์
+    prof_names = df['professor_name'].value_counts()
+    valid_profs = prof_names[prof_names >= min_ratings].index.tolist()
+
+    results = []
+    for name in valid_profs:
+
+        res = predict_future_rating(name, 1, df)
+        
+        if "error" not in res:
+            results.append({
+                "name": name,
+                "avg_rating": round(df[df['professor_name'] == name]['quality'].mean(), 2),
+                "predicted_rating": res["future"]["predicted_ratings"][0],
+                "trend_direction": res["trend_direction"]
+            })
+
+    # 2. จัดอันดับตามคะแนนพยากรณ์จากมากไปน้อย
+    sorted_results = sorted(results, key=lambda x: x['predicted_rating'], reverse=True)
+    return sorted_results[:n]
