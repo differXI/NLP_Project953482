@@ -4,10 +4,17 @@ import "./TrendChart.css";
 export default function TrendChart({ data }) {
   if (!data || data.error) {
     return (
-      <div className="trend-chart-container">
-        <div className="error-message">
-          {data?.error || "No trend data available"}
-        </div>
+      <div className="trend-chart-container" style={{ 
+        display: 'flex', flexDirection: 'column', alignItems: 'center', 
+        justifyContent: 'center', height: '350px', 
+        backgroundColor: '#f9fafb', border: '2px dashed #e5e7eb', 
+        borderRadius: '12px', padding: '20px', textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '48px', opacity: '0.5', marginBottom: '16px' }}>📉</div>
+        <h3 style={{ color: '#4b5563', margin: '0 0 8px 0' }}>Trend Chart Unavailable</h3>
+        <p style={{ color: '#6b7280', fontSize: '14px', margin: 0, maxWidth: '80%' }}>
+          {data?.error || "Not enough data points to generate a reliable trend."}
+        </p>
       </div>
     );
   }
@@ -22,7 +29,7 @@ export default function TrendChart({ data }) {
   if (hasPrediction) {
     // Prediction view: combine historical + future
     const historicalData = data.historical.dates.map((date, i) => ({
-      date: date.substring(5), // Show MM-DD only
+      date: date.substring(0,7),
       fullDate: date,
       actualRating: data.historical.ratings[i],
       trendLine: data.historical.trend_line[i],
@@ -30,7 +37,7 @@ export default function TrendChart({ data }) {
     }));
 
     const futureData = data.future.dates.map((date, i) => ({
-      date: date.substring(5),
+      date: date.substring(0,7),
       fullDate: date,
       predictedRating: data.future.predicted_ratings[i],
       lowerBound: data.future.lower_bound[i],

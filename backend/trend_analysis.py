@@ -25,11 +25,9 @@ def add_synthetic_dates(df):
     df = df.copy()
     n_samples = len(df)
     
-    # กำหนดวันที่สิ้นสุดคือปัจจุบัน และย้อนกลับไป 2 ปี
-    end_date = datetime(2024, 1, 1) # หรือปรับเป็น datetime.now() ก็ได้
-    start_date = end_date - timedelta(days=730) # ย้อนไป 2 ปี
+    end_date = datetime(2024, 1, 1)
+    start_date = end_date - timedelta(days=730) 
     
-    # สร้างวันที่เรียงตามลำดับจากอดีต -> ปัจจุบัน
     date_range = pd.date_range(start=start_date, end=end_date, periods=n_samples)
     df['post_date'] = date_range
 
@@ -46,10 +44,9 @@ def analyze_rating_trend(professor_name: str, df):
             "available_professors": df['professor_name'].unique().tolist()[:10]
         }
 
-    pdf = add_synthetic_dates(pdf)
+    #pdf = add_synthetic_dates(pdf)
     
-    # จัดกลุ่มตาม 'เดือน'
-    pdf['year_month'] = pd.to_datetime(pdf['post_date']).dt.to_period('M')
+    pdf['year_month'] = pd.to_datetime(pdf['date']).dt.to_period('M')
 
     monthly_data = pdf.groupby('year_month').agg({
         'quality': ['mean', 'count']

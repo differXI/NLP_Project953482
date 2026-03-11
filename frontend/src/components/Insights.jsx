@@ -100,7 +100,7 @@ export default function Insights({ data, trendData, predictionData }) {
                 tickLine={false}
                 angle={-45}
                 textAnchor="end"
-                height={60}
+                height={90}
               />
               <YAxis tick={{ fill: '#6b7280' }} tickLine={false} />
               <Tooltip

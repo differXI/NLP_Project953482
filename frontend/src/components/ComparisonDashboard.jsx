@@ -35,6 +35,21 @@ export default function ComparisonDashboard({ availableProfessors }) {
       setLoading(false);
     }
   };
+  
+  const getTablePositivePercent = (prof) => {
+    let pos = 0;
+    if (prof.sentiment_percentages) {
+      pos = prof.sentiment_percentages.positive || prof.sentiment_percentages.Positive || 0;
+    } else if (prof.positive_percentage !== undefined) {
+      pos = prof.positive_percentage;
+    }
+    
+    if (pos === 0 && prof.avg_rating) {
+      pos = (prof.avg_rating / 5) * 100;
+    }
+    
+    return Number(pos).toFixed(1);
+  };
 
   const clearSelection = () => {
     setSelectedProfs([]);
@@ -56,12 +71,29 @@ export default function ComparisonDashboard({ availableProfessors }) {
   const getPercentageChartData = () => {
     if (!comparisonData || !comparisonData.professors) return [];
 
-    return comparisonData.professors.map(p => ({
-      name: p.name.split(' ').pop(),
-      fullName: p.name,
-      positive: p.positive_percentage,
-      negative: p.negative_percentage
-    }));
+    return comparisonData.professors.map(p => {
+
+      let pos = 0;
+      let neg = 0;
+
+      if (p.sentiment_percentages) {
+        pos = p.sentiment_percentages.positive || 0;
+        neg = p.sentiment_percentages.negative || 0;
+      } else if (p.positive_percentage !== undefined) {
+        pos = p.positive_percentage;
+        neg = p.negative_percentage;
+      }
+      if (pos === 0 && neg === 0 && p.avg_rating) {
+         pos = (p.avg_rating / 5) * 100;
+         neg = 100 - pos;
+      }
+      return {
+        name: p.name.split(' ').pop(),
+        fullName: p.name,
+        positive: Number(parseFloat(pos).toFixed(1)),
+        negative: Number(parseFloat(neg).toFixed(1))
+      };
+    });
   };
 
   const getRadarData = () => {
@@ -70,15 +102,29 @@ export default function ComparisonDashboard({ availableProfessors }) {
     // Normalize values for radar chart (0-100 scale)
     const maxRating = 5;
     const maxDiff = 5;
+    const metrics = [
+      { metric: "Quality" },
+      { metric: "Easiness" },
+      { metric: "Positive %" },
+      { metric: "Consistency" }
+    ];
+    comparisonData.professors.forEach(p => {
+      const profName = p.name.split(' ').pop();
+      metrics[0][profName] = (p.avg_rating / maxRating) * 100;
+      metrics[1][profName] = ((maxDiff - p.avg_difficulty) / maxDiff) * 100;
+      let pos = 0;
+      if (p.sentiment_percentages?.positive > 0) {
+        pos = p.sentiment_percentages.positive;
+      } else if (p.positive_percentage > 0) {
+        pos = p.positive_percentage;
+      } else if (p.avg_rating) {
+        pos = (p.avg_rating / 5) * 100;
+      }
+      metrics[2][profName] = Number(pos);
+      metrics[3][profName] = Math.max(0, 100 - (p.rating_std * 20));
+    });
 
-    return comparisonData.professors.map(p => ({
-      professor: p.name.split(' ').pop(),
-      fullName: p.name,
-      Quality: (p.avg_rating / maxRating) * 100,
-      Easiness: ((maxDiff - p.avg_difficulty) / maxDiff) * 100,
-      Positive: p.positive_percentage,
-      Consistency: Math.max(0, 100 - (p.rating_std * 20))
-    }));
+    return metrics;
   };
 
   return (
@@ -176,7 +222,7 @@ export default function ComparisonDashboard({ availableProfessors }) {
                   <div className="table-cell">{prof.avg_difficulty}</div>
                   <div className="table-cell">{prof.num_ratings}</div>
                   <div className="table-cell">
-                    <span className="positive-badge">{prof.positive_percentage}%</span>
+                      <span className="positive-badge">{getTablePositivePercent(prof)}%</span>
                   </div>
                 </div>
               ))}
@@ -223,53 +269,18 @@ export default function ComparisonDashboard({ availableProfessors }) {
               <ResponsiveContainer width="100%" height={400}>
                 <RadarChart data={getRadarData()}>
                   <PolarGrid />
-                  <PolarAngleAxis dataKey="professor" />
+                  <PolarAngleAxis dataKey="metric" />
                   <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                  <Radar
-                    name={comparisonData.professors[0]?.name}
-                    dataKey="Quality"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.6}
-                  />
-                  <Radar
-                    name={comparisonData.professors[0]?.name}
-                    dataKey="Easiness"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.6}
-                  />
-                  <Radar
-                    name={comparisonData.professors[0]?.name}
-                    dataKey="Positive"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.6}
-                  />
-                  {comparisonData.professors.slice(1).map((prof, index) => (
-                    <g key={prof.name}>
-                      <Radar
-                        name={prof.name}
-                        dataKey="Quality"
-                        stroke={COLORS[index % COLORS.length]}
-                        fill={COLORS[index % COLORS.length]}
-                        fillOpacity={0.3}
-                      />
-                      <Radar
-                        name={prof.name}
-                        dataKey="Easiness"
-                        stroke={COLORS[index % COLORS.length]}
-                        fill={COLORS[index % COLORS.length]}
-                        fillOpacity={0.3}
-                      />
-                      <Radar
-                        name={prof.name}
-                        dataKey="Positive"
-                        stroke={COLORS[index % COLORS.length]}
-                        fill={COLORS[index % COLORS.length]}
-                        fillOpacity={0.3}
-                      />
-                    </g>
+                  
+                  {comparisonData.professors.map((prof, index) => (
+                    <Radar
+                      key={prof.name}
+                      name={prof.name.split(' ').pop()}
+                      dataKey={prof.name.split(' ').pop()}
+                      stroke={COLORS[index % COLORS.length]}
+                      fill={COLORS[index % COLORS.length]}
+                      fillOpacity={0.4}
+                    />
                   ))}
                   <Legend />
                 </RadarChart>

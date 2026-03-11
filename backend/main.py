@@ -28,12 +28,14 @@ DATA_PATH = "data/RateMyProfessor_Sample.csv"
 df_raw = pd.read_csv(DATA_PATH)
 
 # Select and rename columns
-df = df_raw[['professor_name','department_name','star_rating','student_difficult','comments']].dropna()
+df = df_raw[['professor_name','department_name','student_star','student_difficult','comments','post_date']].dropna()
 df = df.rename(columns={
     "department_name": "course",
-    "star_rating": "quality",
-    "student_difficult": "difficulty"
+    "student_star": "quality",
+    "student_difficult": "difficulty",
+    "post_date": "date"
 })
+df['date'] = pd.to_datetime(df['date'])
 
 # ========= ALL PROFESSORS =========
 @app.get("/professors")
@@ -101,7 +103,8 @@ def get_professor_trend(name: str):
     result = analyze_rating_trend(name, df)
 
     if "error" in result:
-        raise HTTPException(status_code=404, detail=result["error"])
+        if "not found" in result["error"].lower():
+            raise HTTPException(status_code=404, detail=result["error"])
 
     return result
 
