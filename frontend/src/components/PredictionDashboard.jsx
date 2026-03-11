@@ -47,7 +47,7 @@ useEffect(() => {
               // 1. Precise logic for trend states
               const isRising = prof.predicted_rating > prof.avg_rating;
               const isFalling = prof.predicted_rating < prof.avg_rating;
-              const isStable = Math.abs(prof.predicted_rating - prof.avg_rating) < 0.01;
+              
 
               // 2. Determine background color based on trend
               let bgColor = 'white';
