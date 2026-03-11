@@ -95,17 +95,17 @@ def test_predictions(test_comments):
     print("="*80)
 
     sentiments_list = []
-    all_cats = [] # 🌟 ประกาศตัวแปรเก็บ Category รวมไว้ตรงนี้เลย
+    all_cats = [] # ประกาศตัวแปรเก็บ Category รวมไว้ตรงนี้เลย
     
     for i, comment in enumerate(test_comments, 1):
         display_comment = comment[:100] + '...' if len(comment) > 100 else comment
         
-        # 🌟 เรียกใช้ฟังก์ชันเดียวจบ!
+        # เรียกใช้ฟังก์ชันเดียวจบ
         sentiment, cats, confidence = analyze_text(comment)
         
         # เก็บค่าสะสมไว้ทำ Summary ตอนท้าย
         sentiments_list.append(sentiment)
-        all_cats.extend(cats) # 🌟 เอา category ของคอมเมนต์นี้ไปต่อท้าย list รวม
+        all_cats.extend(cats) # เอา category ของคอมเมนต์นี้ไปต่อท้าย list รวม
 
         print(f"\n[Test {i}]")
         print(f"Comment: {display_comment}")
@@ -131,7 +131,7 @@ def test_predictions(test_comments):
     for sent in sentiment_counts.index:
         print(f"  {sent.capitalize()}: {sentiment_counts[sent]}")
 
-    # 🌟 นับ Category จาก all_cats ที่เราเก็บสะสมมาได้เลย
+    # นับ Category จาก all_cats ที่เราเก็บสะสมมาได้เลย
     if all_cats:
         cat_counts = pd.Series(all_cats).value_counts()
         print(f"\nCategory Distribution:")

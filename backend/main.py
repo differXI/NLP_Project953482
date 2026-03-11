@@ -27,13 +27,83 @@ app.add_middleware(
 DATA_PATH = "data/RateMyProfessor_Sample.csv"
 df_raw = pd.read_csv(DATA_PATH)
 
-# Select and rename columns
-df = df_raw[['professor_name','department_name','star_rating','student_difficult','comments']].dropna()
+# Select and rename columns - เพิ่มคอลัมน์ใหม่สำหรับวิชา
+df = df_raw[[
+    'professor_name',
+    'department_name',
+    'name_not_onlines',    # เพิ่ม - รหัสวิชา (ใช้ name_not_onlines ไม่ใช่ local_name)
+    'IsCourseOnline',       # เพิ่ม - ประเภทวิชา
+    'star_rating',
+    'student_difficult',
+    'comments'
+]].dropna()
+
 df = df.rename(columns={
-    "department_name": "course",
+    "department_name": "course",          # เปลี่ยนชื่อให้สื่อความหมายมากขึ้น
+    "name_not_onlines": "course_code",    # เพิ่ม - รหัสวิชา (ใช้ name_not_onlines)
+    "IsCourseOnline": "course_type",      # เพิ่ม - ประเภท (0/1)
     "star_rating": "quality",
     "student_difficult": "difficulty"
 })
+
+# แปลงค่า 0/1 เป็น "onsite"/"online"
+df['course_type'] = df['course_type'].map({0: 'onsite', 1: 'online'})
+
+# Handle "NAN" string values in course_code
+df['course_code'] = df['course_code'].replace('NAN', None)
+df['course_code'] = df['course_code'].fillna('N/A')
+
+# ========= SUBJECT DATA =========
+def get_all_subjects(df):
+    """สร้างรายการวิชาทั้งหมดพร้อมสถิติ"""
+    subjects = {}
+
+    for _, row in df.iterrows():
+        course_name = row['course']
+        # ใช้ course_code จาก name_not_onlines (ถ้ามีค่า "NAN" ให้ใช้ค่าว่าง)
+        course_code = row.get('course_code', 'N/A')
+        if pd.isna(course_code) or course_code == 'NAN':
+            course_code = 'N/A'
+        course_type = row.get('course_type', 'unknown')
+
+        key = f"{course_name}|{course_type}"
+
+        if key not in subjects:
+            subjects[key] = {
+                'name': course_name,
+                'code': course_code,
+                'type': course_type,
+                'count': 0,
+                'avg_quality': 0,
+                'avg_difficulty': 0,
+                'professors': set(),
+                'course_codes': set()  # เก็บรหัสวิชาทั้งหมด
+            }
+
+        subjects[key]['count'] += 1
+        subjects[key]['professors'].add(row['professor_name'])
+        subjects[key]['course_codes'].add(course_code)
+
+    # คำนวณค่าเฉลี่ย
+    for key in subjects:
+        subject_df = df[
+            (df['course'] == subjects[key]['name']) &
+            (df['course_type'] == subjects[key]['type'])
+        ]
+        subjects[key]['avg_quality'] = round(subject_df['quality'].mean(), 2)
+        subjects[key]['avg_difficulty'] = round(subject_df['difficulty'].mean(), 2)
+        subjects[key]['professor_count'] = len(subjects[key]['professors'])
+        subjects[key]['professors'] = list(subjects[key]['professors'])[:5]  # โชว์ 5 คนแรก
+        subjects[key]['course_codes'] = list(subjects[key]['course_codes'])[:10]  # โชว์ 10 รหัสแรก
+
+    # Convert to list and filter by minimum review count
+    subjects_list = list(subjects.values())
+    subjects_list = [s for s in subjects_list if s['count'] >= 5]  # เฉพาะวิชาที่มี >= 5 รีวิว
+
+    return subjects_list
+
+# เรียกใช้ตอนเริ่ม
+all_subjects = get_all_subjects(df)
 
 # ========= ALL PROFESSORS =========
 @app.get("/professors")
@@ -166,6 +236,88 @@ def get_top_professors_endpoint(
 
     return get_top_professors(by, n, min_ratings, df)
 
+
+# ========= SUBJECTS =========
+@app.get("/subjects")
+def get_subjects(
+    type: Optional[str] = None,  # "online" หรือ "onsite" หรือ None (ทั้งหมด)
+    search: Optional[str] = None  # ค้นหาชื่อวิชา
+):
+    """ดึงรายการวิชาทั้งหมด กรองตามประเภทและชื่อ"""
+    subjects = all_subjects.copy()
+
+    if type:
+        subjects = [s for s in subjects if s['type'] == type]
+
+    if search:
+        search_lower = search.lower()
+        subjects = [s for s in subjects if search_lower in s['name'].lower()]
+
+    return {
+        "total": len(subjects),
+        "subjects": subjects
+    }
+
+@app.get("/subject/{name}")
+def get_subject_detail(name: str, type: str):
+    """ดึงข้อมูลละเอียดของวิชาตามชื่อและประเภท"""
+    subject_df = df[
+        (df['course'] == name) &
+        (df['course_type'] == type)
+    ]
+
+    if len(subject_df) == 0:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+    # NLP Analysis สำหรับวิชา
+    comments = subject_df["comments"].sample(min(50, len(subject_df)))
+    sentiments = []
+    categories = []
+
+    for c in comments:
+        s, cat, _ = analyze_text(c)
+        sentiments.append(s)
+        categories.extend(cat)
+
+    # Get top professors in this subject
+    top_profs = subject_df.groupby('professor_name')['quality'].mean().nlargest(5).to_dict()
+
+    return {
+        "name": name,
+        "type": type,
+        "avg_quality": round(subject_df['quality'].mean(), 2),
+        "avg_difficulty": round(subject_df['difficulty'].mean(), 2),
+        "total_reviews": len(subject_df),
+        "professor_count": subject_df['professor_name'].nunique(),
+        "top_professors": top_profs,
+        "sentiment_distribution": pd.Series(sentiments).value_counts().to_dict(),
+        "category_counts": pd.Series(categories).value_counts().to_dict(),
+        "course_codes": subject_df['course_code'].unique().tolist()[:10]
+    }
+
+@app.get("/professor/{name}/subjects")
+def get_professor_subjects(name: str):
+    """ดึงรายการวิชาที่อาจารย์สอน แยกตามประเภท"""
+    prof_df = df[df['professor_name'] == name]
+
+    if len(prof_df) == 0:
+        raise HTTPException(status_code=404, detail="Professor not found")
+
+    subjects = []
+    for (course, course_type), group in prof_df.groupby(['course', 'course_type']):
+        subjects.append({
+            'name': course,
+            'type': course_type,
+            'avg_quality': round(group['quality'].mean(), 2),
+            'avg_difficulty': round(group['difficulty'].mean(), 2),
+            'review_count': len(group)
+        })
+
+    return {
+        "professor": name,
+        "subjects": subjects
+    }
+
 # ========= HEALTH CHECK =========
 @app.get("/health")
 def health_check():
@@ -182,7 +334,10 @@ def health_check():
             "professor_predict": "/professor/{name}/predict",
             "search": "/search?q=query",
             "compare": "/professors/compare",
-            "top": "/professors/top"
+            "top": "/professors/top",
+            "subjects": "/subjects",
+            "subject_detail": "/subject/{name}?type=online|onsite",
+            "professor_subjects": "/professor/{name}/subjects"
         }
     }
 
@@ -201,6 +356,9 @@ def root():
             "professor_predict": "/professor/{name}/predict?periods=5",
             "search": "/search?q=query",
             "compare": "/professors/compare?names=prof1,prof2",
-            "top": "/professors/top?by=rating&n=10"
+            "top": "/professors/top?by=rating&n=10",
+            "subjects": "/subjects?type=online|onsite&search=query",
+            "subject_detail": "/subject/{name}?type=online|onsite",
+            "professor_subjects": "/professor/{name}/subjects"
         }
     }
