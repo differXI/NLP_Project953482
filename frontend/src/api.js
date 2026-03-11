@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API =
   process.env.NODE_ENV === "production"
-    ? "https://nlp-project953482-aamd.vercel.app/"
+    ? "https://nlp-project953482.onrender.com/"
     : "http://127.0.0.1:8000";
 
 // ========= BASIC API CALLS =========

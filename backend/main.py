@@ -17,7 +17,7 @@ app = FastAPI(title="Course & Instructor Evaluation Analytics API")
 # allow React
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:8000", "https://nlp-project953482-aamd.vercel.app"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:8000", "https://nlp-project953482.vercel.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
