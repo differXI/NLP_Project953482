@@ -187,7 +187,7 @@ def compare_professors(professor_names: List[str], df):
         num_ratings = len(pdf)
         rating_std = round(pdf['quality'].std(), 2) if num_ratings > 1 else 0.0
 
-        # ใช้การสุ่มตรวจ Sentiment แค่ 50 คอมเมนต์ เพื่อให้ API ตอบกลับเร็วขึ้น
+        # ใช้การสุ่มตรวจ Sentiment แค่ 50 คอมเมนต์ (ข้อมูลเยอะกลัวสะดุด)
         sentiments = []
         from analytics import analyze_text
         for c in pdf['comments'].sample(min(50, len(pdf))):
@@ -195,7 +195,7 @@ def compare_professors(professor_names: List[str], df):
                 s, _ = analyze_text(c)
                 sentiments.append(s)
             except Exception:
-                pass # เผื่อกรณีไฟล์ analytics มีปัญหา จะได้ไม่พังทั้งระบบ
+                pass # เผื่อกรณีไฟล์ analytics มีปัญหา จะได้ไม่พังทั้งหมด
 
         sentiment_counts = pd.Series(sentiments).value_counts()
         total_sents = len(sentiments) if len(sentiments) > 0 else 1

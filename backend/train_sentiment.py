@@ -20,9 +20,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# ==========================================
-# ⚙️ SETTINGS (ปรับแก้ค่าต่างๆ ได้ตรงนี้เลย)
-# ==========================================
+
+# SETTINGS 
+
 CONFIG = {
     "data_path": os.path.join(BASE_DIR, "data", "RateMyProfessor_Sample.csv"),
     "model_dir": os.path.join(BASE_DIR, "models"),
@@ -31,9 +31,9 @@ CONFIG = {
     "random_seed": 42                                 # ล็อคผลลัพธ์ให้เหมือนเดิมทุกครั้งที่รัน
 }
 
-# ==========================================
+
 # 1. SETUP & PREPARATION
-# ==========================================
+
 def setup_nltk():
     """ดาวน์โหลดข้อมูล NLTK ที่จำเป็น (ถ้ายังไม่มี)"""
     try:
@@ -52,7 +52,7 @@ def load_data(filepath):
 
     df = pd.read_csv(filepath)
     
-    # เช็คว่ามีคอลัมน์ที่ต้องการไหม
+    # เช็คว่ามีคอลัมน์ที่ต้องการเปล่า
     if not all(col in df.columns for col in ['student_star', 'comments']):
         raise ValueError("Dataset must contain 'student_star' and 'comments' columns.")
 
@@ -60,7 +60,7 @@ def load_data(filepath):
     df = df[['student_star', 'comments']].dropna()
     print(f"Loaded {len(df)} valid reviews.")
 
-    # กำหนดเกณฑ์คะแนน (แก้เกณฑ์ตรงนี้ได้เลยถ้าต้องการ)
+    # กำหนดเกณฑ์คะแนน
     def assign_sentiment(rating):
         if rating >= 4.0: return 'positive'
         if rating <= 2.5: return 'negative'
@@ -101,9 +101,9 @@ def clean_text(texts):
 
     return processed
 
-# ==========================================
+
 # 2. TRAINING PIPELINE
-# ==========================================
+
 def train_model():
     """รันขั้นตอนการเทรนทั้งหมด"""
     setup_nltk()
@@ -133,7 +133,7 @@ def train_model():
         max_df=0.8
     )
     
-    # 🔥 จุดสำคัญ: Fit เฉพาะชุด Train เท่านั้น
+    #  สำคัญ: Fit เฉพาะชุด Train เท่านั้น
     X_train = vectorizer.fit_transform(X_train_text)
     
     # ส่วนชุด Test ให้ทำแค่ Transform (ห้าม fit เด็ดขาด)
@@ -171,9 +171,9 @@ def train_model():
     
     return test_acc
 
-# ==========================================
+
 # 3. EXECUTION
-# ==========================================
+
 if __name__ == "__main__":
     # รองรับการรับ path ผ่าน command line: python train_sentiment.py ./my_data.csv
     if len(sys.argv) > 1:
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     try:
         train_model()
     except Exception as e:
-        print(f"\n❌ ERROR: {e}")
+        print(f"\n ERROR: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

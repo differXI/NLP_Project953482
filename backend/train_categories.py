@@ -22,9 +22,9 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import classification_report, hamming_loss
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# ==========================================
-# ⚙️ SETTINGS
-# ==========================================
+
+#  SETTINGS
+
 CONFIG = {
     "data_path": os.path.join(BASE_DIR, "data", "RateMyProfessor_Sample.csv"),
     "model_dir": os.path.join(BASE_DIR, "models"),
@@ -72,7 +72,7 @@ CATEGORY_KEYWORDS = {
             'harsh grader', 'too much work', 'heavy workload', 'difficult exam', 
             'hard test', 'unfair grading', 'fail'
         ],
-        # เพิ่มหมวดกลางๆ เพราะพูดถึงเรื่องโครงสร้างวิชาแน่นอน (มาจาก Top 50 คำที่ตกหล่น)
+        # เพิ่มหมวดกลางๆ เพราะพูดถึงเรื่องโครงสร้างวิชา
         'neutral': [
             'test', 'exam', 'homework', 'assignment', 'paper', 'quiz', 'project', 
             'book', 'textbook', 'study', 'grade', 'note', 'read'
@@ -105,9 +105,9 @@ CATEGORY_KEYWORDS = {
     }
 }
 
-# ==========================================
+
 # 1. TEXT PREPARATION
-# ==========================================
+
 def setup_nltk():
     try:
         nltk.data.find('corpora/stopwords')
@@ -160,7 +160,7 @@ def create_category_labels(comments):
 
         # 3. ใช้ Regex ค้นหา (ค้นหาจาก comment_lemmatized แทน)
         for category, subcats in CATEGORY_KEYWORDS.items():
-            # รวมคำศัพท์จากทั้ง positive, negative (และ neutral ถ้ามี)
+            # รวมศัพท์ positive, negative
             all_keywords = []
             for subcat, keywords in subcats.items():
                 all_keywords.extend(keywords)
@@ -184,9 +184,9 @@ def create_category_labels(comments):
 
     return labels
 
-# ==========================================
+
 # 2. TRAINING PIPELINE
-# ==========================================
+
 def train_category_model():
     setup_nltk()
     os.makedirs(CONFIG["model_dir"], exist_ok=True)
@@ -204,7 +204,7 @@ def train_category_model():
     # 2. สร้าง Labels ด้วย Regex
     y_raw = create_category_labels(comments)
 
-    # 3. คัดเอาเฉพาะคอมเมนต์ที่มีอย่างน้อย 1 หมวดหมู่ไปสอน ML
+    # 3. คัดเอาเฉพาะคอมเมนต์ที่มีอย่างน้อย 1 หมวดหมู่
     valid_indices = [i for i, labels in enumerate(y_raw) if len(labels) > 0]
     comments_filtered = [comments[i] for i in valid_indices]
     y_raw_filtered = [y_raw[i] for i in valid_indices]
@@ -216,7 +216,7 @@ def train_category_model():
     mlb = MultiLabelBinarizer()
     y = mlb.fit_transform(y_raw_filtered)
 
-    # 5. แบ่งข้อมูล (Train / Test Split ทันที ป้องกัน Data Leakage!)
+    # 5. แบ่งข้อมูล (Train / Test Split)
     print("\nSplitting data before Vectorization...")
     X_train_text, X_test_text, y_train, y_test = train_test_split(
         comments_filtered, y, 
@@ -255,7 +255,7 @@ def train_category_model():
     y_train_pred = model.predict(X_train)
     y_test_pred = model.predict(X_test)
 
-    # 🚀 โชว์ Train Accuracy ให้เห็นรอยหยักสมองของโมเดล
+    # โชว์ Train Accuracy ให้เห็นรอยหยักสมองของโมเดล
     train_acc = (y_train_pred == y_train).mean()
     test_acc = (y_test_pred == y_test).mean()
     test_hamming = hamming_loss(y_test, y_test_pred)
@@ -267,7 +267,7 @@ def train_category_model():
     print(classification_report(y_test, y_test_pred, target_names=mlb.classes_))
 
     # 10. เซฟโมเดล
-    # ⚠️ สำคัญ: ต้องเซฟ Vectorizer แยกตั้งชื่อว่า category_vectorizer.pkl
+    # สำคัญ: ต้องเซฟ Vectorizer แยกตั้งชื่อว่า category_vectorizer.pkl
     vec_path = os.path.join(CONFIG["model_dir"], 'category_vectorizer.pkl')
     mod_path = os.path.join(CONFIG["model_dir"], 'category_model.pkl')
     mlb_path = os.path.join(CONFIG["model_dir"], 'mlb.pkl')
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     try:
         train_category_model()
     except Exception as e:
-        print(f"\n❌ ERROR: {e}")
+        print(f"\n ERROR: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

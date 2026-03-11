@@ -26,5 +26,21 @@ export const getTopProfessors = (by = "rating", n = 10, minRatings = 5) =>
   axios.get(`${API}/professors/top?by=${by}&n=${n}&min_ratings=${minRatings}`);
 export const getPredictedRankings = (n = 10) => axios.get(`${API}/professors/predicted-rankings?n=${n}`);
 
+// ========= SUBJECTS =========
+export const getSubjects = (type = null, search = null) => {
+  let url = `${API}/subjects`;
+  const params = [];
+  if (type) params.push(`type=${type}`);
+  if (search) params.push(`search=${search}`);
+  if (params.length) url += `?${params.join('&')}`;
+  return axios.get(url);
+};
+
+export const getSubject = (name, type) =>
+  axios.get(`${API}/subject/${encodeURIComponent(name)}?type=${type}`);
+
+export const getProfessorSubjects = (name) =>
+  axios.get(`${API}/professor/${encodeURIComponent(name)}/subjects`);
+
 // ========= HEALTH =========
 export const healthCheck = () => axios.get(`${API}/health`);

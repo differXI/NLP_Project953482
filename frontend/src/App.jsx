@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { getProfessors, getProfessor, searchProf, getProfessorTrend, predictProfessorRating } from "./api";
+import { getProfessors, getProfessor, searchProf, getProfessorTrend, predictProfessorRating, getSubjects, getSubject } from "./api";
 import SearchBar from "./components/SearchBar";
 import ProfessorList from "./components/ProfessorList";
 import Insights from "./components/Insights";
 import ComparisonDashboard from "./components/ComparisonDashboard";
 import RankingDashboard from "./components/RankingDashboard";
 import PredictionDashboard from "./components/PredictionDashboard";
+import SubjectList from "./components/SubjectList";
+import SubjectInsights from "./components/SubjectInsights";
 
 function App() {
   const [profs, setProfs] = useState([]);
@@ -14,10 +16,16 @@ function App() {
   const [trendData, setTrendData] = useState(null);
   const [predictionData, setPredictionData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState("prediction"); // "prediction","individual", "comparison", or "ranking"
+  const [view, setView] = useState("prediction"); // "prediction","individual", "comparison", "ranking", or "subject"
+
+  // Subject states
+  const [subjects, setSubjects] = useState([]);
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [subjectData, setSubjectData] = useState(null);
 
   useEffect(() => {
     getProfessors().then(r => setProfs(r.data));
+    getSubjects().then(r => setSubjects(r.data.subjects));
   }, []);
 
   const selectProf = async (name) => {
@@ -49,10 +57,34 @@ function App() {
   const search = (q) => {
     if (q.length >= 3) {
       searchProf(q).then(r => setProfs(r.data));
-    } 
+    }
     else if (q.length === 0) {
       getProfessors().then(r => setProfs(r.data));
     }
+  };
+
+  const selectSubject = async (subject) => {
+    setView("subject");
+    setSelectedSubject(subject);
+    setLoading(true);
+    setSubjectData(null);
+
+    try {
+      const res = await getSubject(subject.name, subject.type);
+      setSubjectData(res.data);
+    } catch (error) {
+      console.error("Error fetching subject data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const backToSubjectList = () => {
+    setSubjectData(null);
+  };
+
+  const backToProfessorList = () => {
+    setData(null);
   };
 
   return (
@@ -147,6 +179,21 @@ function App() {
               >
                 📊 Compare Professors
               </button>
+              <button
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: view === 'subject' ? 'white' : 'transparent',
+                  color: view === 'subject' ? '#3b82f6' : '#6b7280',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setView("subject")}
+              >
+                📚 Subjects
+              </button>
             </div>
 
             {/* Individual View */}
@@ -170,6 +217,7 @@ function App() {
                     data={data}
                     trendData={trendData}
                     predictionData={predictionData}
+                    onBack={backToProfessorList}
                   />
                 )}
               </>
@@ -187,6 +235,29 @@ function App() {
             {view === "prediction" && (
               <PredictionDashboard />
              )}
+
+            {/* Subject View */}
+            {view === "subject" && (
+              <>
+                {loading && (
+                  <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                    Loading subject data...
+                  </div>
+                )}
+
+                {!loading && !subjectData && (
+                  <SubjectList
+                    subjects={subjects}
+                    onSelect={selectSubject}
+                    selected={selectedSubject}
+                  />
+                )}
+
+                {!loading && subjectData && (
+                  <SubjectInsights data={subjectData} onBack={backToSubjectList} />
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

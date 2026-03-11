@@ -1,13 +1,13 @@
 import joblib
 import os
 
-# 🌟 1. หาตำแหน่งโฟลเดอร์ที่ analytics.py ตั้งอยู่
+#  1. หาตำแหน่งโฟลเดอร์ที่ analytics.py ตั้งอยู่
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# 🌟 2. ประกอบ Path ให้ชี้ไปที่โฟลเดอร์ models อย่างแม่นยำ
+#  2. Path ให้ชี้ไปที่โฟลเดอร์ models อย่างแม่นยำ
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 
-# 🌟 3. โหลดโมเดลด้วย Path เต็ม
+#  3. โหลดโมเดลด้วย Path เต็ม
 sentiment_vectorizer = joblib.load(os.path.join(MODELS_DIR, "vectorizer.pkl"))
 category_vectorizer = joblib.load(os.path.join(MODELS_DIR, "category_vectorizer.pkl"))
 

@@ -15,7 +15,7 @@ const CATEGORY_COLORS = {
   professional_behavior: "#10b981"
 };
 
-export default function Insights({ data, trendData, predictionData }) {
+export default function Insights({ data, trendData, predictionData, onBack }) {
   if (!data) return null;
 
   // Prepare sentiment chart data
@@ -37,9 +37,53 @@ export default function Insights({ data, trendData, predictionData }) {
 
   return (
     <div>
-      <h2 style={{ marginBottom: 20 }}>{data.professor}</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <h2 style={{ margin: 0 }}>{data.professor}</h2>
+        {onBack && (
+          <button
+            onClick={onBack}
+            style={{
+              padding: '8px 16px',
+              background: '#f3f4f6',
+              border: '1px solid #d1d5db',
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontSize: 13,
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.background = '#e5e7eb'}
+            onMouseLeave={(e) => e.target.style.background = '#f3f4f6'}
+          >
+            ← Back to List
+          </button>
+        )}
+      </div>
+
       <p>Avg Rating: <strong>{data.avg_rating}</strong></p>
       <p>Avg Difficulty: <strong>{data.avg_difficulty}</strong></p>
+
+      {/* Courses Taught */}
+      {data.courses && data.courses.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <h4 style={{ margin: '0 0 10px 0', fontSize: 14 }}>Courses Taught</h4>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {data.courses.map((course, idx) => (
+              <span
+                key={idx}
+                style={{
+                  padding: '4px 10px',
+                  background: '#f3f4f6',
+                  borderRadius: 12,
+                  fontSize: 13,
+                  color: '#374151'
+                }}
+              >
+                {course}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Trend Chart */}
       {combinedTrendData && (
