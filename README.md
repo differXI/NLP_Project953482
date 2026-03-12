@@ -2,6 +2,9 @@
 
 ## Project Overview
 
+(if not run on local computer/manually.
+-The backend will running on https://nlp-project953482.onrender.com/, and front end will running on https://nlp-project953482.vercel.app/ )
+
 An NLP-powered analytics system for analyzing course and instructor evaluations. The system combines quantitative data analysis with natural language processing to provide comprehensive insights into teaching performance.
 
 **Key Features:**
@@ -194,30 +197,7 @@ NLP_Project953482/
     │       ├── TrendChart.jsx         # Trend visualization
     │       └── ComparisonDashboard.jsx  # Comparison UI
     └── package.json               # Node dependencies
-```
 
----
-
-##  Documentation Files
-
-| File | Description |
-|------|-------------|
-| **[README.md](README.md)** | This file - Quick start guide |
-| **[research.md](research.md)** | Complete research, methodology & architecture |
-| **[plan.md](plan.md)** | Implementation plan & development roadmap |
-| **[result.md](result.md)** | Expected results vs requirements coverage |
-
----
-
-##  Training Models
-
-### When to Retrain?
-
-Retrain models when:
-1. **New data added** - More comments available
-2. **Poor performance** - Model accuracy is low
-3. **Category changes** - Need to modify categories
-4. **Reproducibility** - Need to verify training process
 
 ### Training Process
 
@@ -306,7 +286,7 @@ lsof -ti:8000 | xargs kill -9
 
 ##  Features Implemented
 
-###  Core Features (100% Complete)
+
 
 1.  **Sentiment Classification**
    - Three-class classification (Positive/Neutral/Negative)
@@ -368,20 +348,7 @@ joblib>=1.3.0
 pydantic>=2.0.0
 ```
 
-### Frontend (package.json)
 
-```
-{
-  "dependencies": {
-    "react": "^19.2.4",
-    "react-scripts": "5.0.1",
-    "recharts": "^3.7.0",
-    "axios": "^1.13.6"
-  }
-}
-```
-
----
 
 ##  Datasets
 
@@ -392,25 +359,8 @@ pydantic>=2.0.0
 - **Records:** ~100K+ reviews
 - **Columns:** professor_name, department_name, star_rating, student_difficult, comments
 
-### Data Processing
 
-- Columns renamed for consistency
-- Rows with missing values dropped
-- Up to 50 comments sampled per professor for NLP analysis
-- Synthetic dates generated for trend analysis (2022-2024)
 
----
-
-##  Development Workflow
-
-### Making Changes
-
-**Backend changes:**
-```bash
-# Edit backend files
-# Server auto-reloads if using uvicorn --reload
-# Or restart: Ctrl+C, then python main.py
-```
 
 **Frontend changes:**
 ```bash
@@ -428,45 +378,5 @@ python evaluate_models.py     # Default test cases
 
 # Frontend: Check browser console (F12)
 # Or: npm test
-```
 
----
 
-##  Additional Resources
-
-- **FastAPI:** https://fastapi.tiangolo.com/
-- **React:** https://react.dev/
-- **scikit-learn:** https://scikit-learn.org/
-- **Recharts:** https://recharts.org/
-
----
-
-##  Support
-
-For questions or issues:
-1. Check the [troubleshooting section](#-troubleshooting)
-2. Review [research.md](research.md) for methodology
-3. Review [plan.md](plan.md) for implementation details
-4. Check API docs at: http://127.0.0.1:8000/docs
-
----
-
-##  Implementation Status
-
-**Requirements Coverage:** 100% 
-
-| Category | Status |
-|----------|--------
-| Objectives (5/5) | Complete |
-| Core Features (5/5) |  Complete |
-| Target Users (4/4) |  Complete |
-| Training Scripts |  Complete |
-| Trend Analysis |  Complete |
-| Prediction Feature |  Complete |
-| Comparison Feature |  Complete |
-
----
-
-*Last Updated: March 4, 2026*
-*Project Status:  Implementation Complete*
-*Version: 1.0.0*
